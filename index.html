@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LLM Cost Dashboard — Inference & Training (Feb 2026)</title>
+<meta name="description" content="Interactive LLM cost dashboard: inference cost decline with microwave-oven equivalents, and training cost escalation with Boeing 777 metal smelting equivalents. Updated Feb 2026.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#08080f;color:#ccc;font-family:'JetBrains Mono','SF Mono',monospace;-webkit-font-smoothing:antialiased}
+#root{min-height:100vh}
+::selection{background:#ff446644;color:#fff}
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:#111}
+::-webkit-scrollbar-thumb{background:#333;border-radius:3px}
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/recharts/2.7.3/Recharts.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const{useState}=React;
+const{ComposedChart,Line,Area,XAxis,YAxis,CartesianGrid,Tooltip,ResponsiveContainer,ReferenceLine}=Recharts;
+
+// ═══════════════════════════════════════════════════════
+// SHARED CONSTANTS
+// ═══════════════════════════════════════════════════════
+const font="'JetBrains Mono','SF Mono',monospace";
+const hf="'DM Sans',sans-serif";
+const P={
+  bg:"#08080f",panel:"#0e0e1a",card:"#111122",grid:"#161630",
+  dim:"#445",text:"#bbc",bright:"#eee",
+  red:"#ff4466",green:"#22dd88",gold:"#ffaa22",cyan:"#44ccff",
+  blue:"#4488ff",purple:"#aa66ff",steel:"#8899aa",
+  xai:"#ff8844",meta:"#0088ff",rose:"#e94560",amber:"#ffd700",
+};
+
+// ═══════════════════════════════════════════════════════
+// SECTION 1 — INFERENCE DATA
+// ═══════════════════════════════════════════════════════
+const MW_WATTS=1000, ELEC_R=0.15;
+const MW_CPS=(MW_WATTS/1000)*(ELEC_R/3600); // $/sec microwave
+const QI=1000, QO=500; // query tokens
+
+const infRaw=[
+  {d:"2022-11",l:"Nov 2022",m:"text-davinci-003",i:20,o:20,n:"GPT-3.5 era (davinci)",p:false},
+  {d:"2023-03",l:"Mar 2023",m:"GPT-4 (8K)",i:30,o:60,n:"GPT-4 launch",p:false},
+  {d:"2023-06",l:"Jun 2023",m:"GPT-3.5 Turbo",i:1.5,o:2,n:"Price cut",p:false},
+  {d:"2023-11",l:"Nov 2023",m:"GPT-4 Turbo",i:10,o:30,n:"GPT-4 Turbo launch",p:false},
+  {d:"2024-05",l:"May 2024",m:"GPT-4o",i:5,o:15,n:"GPT-4o launch",p:false},
+  {d:"2024-07",l:"Jul 2024",m:"GPT-4o mini",i:0.15,o:0.6,n:"GPT-4o mini — frontier-lite",p:false},
+  {d:"2024-08",l:"Aug 2024",m:"GPT-4o (updated)",i:2.5,o:10,n:"GPT-4o price drop",p:false},
+  {d:"2025-01",l:"Jan 2025",m:"DeepSeek R1",i:0.55,o:2.19,n:"DeepSeek disruption — ~90% below incumbents",p:false},
+  {d:"2025-06",l:"Jun 2025",m:"Frontier equiv.",i:0.3,o:0.8,n:"GPT-4 equiv. ~$0.40/M blended",p:false},
+  {d:"2025-12",l:"Dec 2025",m:"Blackwell-era",i:0.15,o:0.4,n:"Blackwell HW, continued competition",p:false},
+  {d:"2026-06",l:"Jun 2026",m:"Blackwell opt.",i:0.08,o:0.2,n:"Blackwell + TensorRT-LLM 2.8× gains",p:true},
+  {d:"2027-01",l:"Jan 2027",m:"Vera Rubin era",i:0.015,o:0.04,n:"Rubin: 10× token cost vs Blackwell",p:true},
+  {d:"2027-06",l:"Jun 2027",m:"Rubin Ultra",i:0.008,o:0.02,n:"Rubin Ultra: doubled density",p:true},
+];
+
+const infData=infRaw.map((d,i,a)=>{
+  const qc=(d.i*QI)/1e6+(d.o*QO)/1e6;
+  const mws=qc/MW_CPS;
+  const cl=Math.log10(qc), ml=Math.log10(mws);
+  const la=!d.p&&a[i+1]?.p;
+  return{...d,qc,mws,cl,ml,
+    aCL:!d.p?cl:null, pCL:d.p||la?cl:null,
+    aML:!d.p?ml:null, pML:d.p||la?ml:null,
+    label:d.l,model:d.m,note:d.n,proj:d.p};
+});
+
+const fCost=(v)=>{if(v>=0.01)return`$${v.toFixed(3)}`;if(v>=0.001)return`$${v.toFixed(4)}`;if(v>=1e-4)return`$${v.toFixed(5)}`;return`$${v.toExponential(1)}`;};
+const fMW=(s)=>{if(s>=60)return`${(s/60).toFixed(1)} min`;if(s>=1)return`${s.toFixed(1)}s`;if(s>=0.001)return`${(s*1000).toFixed(1)}ms`;return`${(s*1e6).toFixed(0)}µs`;};
+
+// ═══════════════════════════════════════════════════════
+// SECTION 2 — TRAINING DATA (777 equiv)
+// ═══════════════════════════════════════════════════════
+const B7M=3100.4, B7C=B7M*1000*ELEC_R;
+const to7=u=>u/B7C, toMW2=u=>u/ELEC_R/1000;
+const fC=v=>{if(v>=1e9)return`$${(v/1e9).toFixed(1)}B`;if(v>=1e6)return`$${(v/1e6).toFixed(0)}M`;if(v>=1e3)return`$${(v/1e3).toFixed(0)}K`;return`$${v.toFixed(0)}`;};
+const f7=v=>{if(v>=1000)return`${(v/1000).toFixed(1)}K`;if(v>=1)return v.toFixed(1);if(v>=0.001)return v.toFixed(3);return v.toExponential(1);};
+const fMh=v=>{if(v>=1e6)return`${(v/1e6).toFixed(1)}M MWh`;if(v>=1e3)return`${(v/1e3).toFixed(0)}K MWh`;return`${v.toFixed(0)} MWh`;};
+
+const FR=[
+  {l:"2017",m:"Transformer",c:900,p:false,t:null},{l:"2018",m:"BERT",c:7000,p:false,t:null},
+  {l:"2019",m:"GPT-2",c:50000,p:false,t:null},{l:"2020",m:"GPT-3",c:4600000,p:false,t:null},
+  {l:"2022 Q1",m:"PaLM",c:12000000,p:false,t:null},{l:"2022 Q3",m:"Chinchilla",c:3000000,p:false,t:null},
+  {l:"2023 Q1",m:"GPT-4",c:78000000,p:false,t:null},{l:"2023 Q4",m:"Gemini Ultra",c:191000000,p:false,t:null},
+  {l:"2024 Q2",m:"Llama 3.1 405B",c:60000000,p:false,t:"meta"},{l:"2024 Q2·",m:"GPT-4o",c:30000000,p:false,t:"eff"},
+  {l:"2024 Q4",m:"DeepSeek V3",c:5576000,p:false,t:"eff"},
+  {l:"2025 Q1",m:"Grok 3",c:300000000,p:false,t:"xai"},{l:"2025 Q1·",m:"GPT-4.5",c:400000000,p:false,t:null},
+  {l:"2025 Q1··",m:"DeepSeek R1",c:10000000,p:false,t:"eff"},
+  {l:"2025 Q3",m:"Grok 4",c:490000000,p:false,t:"xai"},{l:"2025 Q3·",m:"GPT-5",c:500000000,p:false,t:null},
+  {l:"2026",m:"Frontier (est.)",c:800000000,p:true,t:null},{l:"2027",m:"Frontier (est.)",c:2000000000,p:true,t:null},
+];
+const RG3=[{l:"2020",c:4600000,p:false},{l:"2022",c:450000,p:false},{l:"2023",c:200000,p:false},{l:"2024 Q1",c:100000,p:false},{l:"2024 Q4",c:50000,p:false},{l:"2025",c:25000,p:false},{l:"2026",c:10000,p:true},{l:"2027",c:3000,p:true}];
+const RG4=[{l:"2023 Q1",c:78000000,p:false},{l:"2023 Q4",c:20000000,p:false},{l:"2024 Q4",c:5576000,p:false},{l:"2025 Q1",c:3000000,p:false},{l:"2026",c:1000000,p:true},{l:"2027",c:300000,p:true}];
+
+const frontier=FR.map((d,i,a)=>{const lc=Math.log10(d.c);const la=!d.p&&a[i+1]?.p;return{...d,n777:to7(d.c),logCost:lc,label:d.l,model:d.m,cost:d.c,proj:d.p,tag:d.t,actualLog:!d.p?lc:null,projLog:d.p||la?lc:null};});
+
+const allRL=[...new Set([...RG3.map(d=>d.l),...RG4.map(d=>d.l)])].sort();
+const repData=allRL.map(label=>{const g3=RG3.find(d=>d.l===label);const g4=RG4.find(d=>d.l===label);const g3i=RG3.findIndex(d=>d.l===label);const g4i=RG4.findIndex(d=>d.l===label);const la3=g3&&!g3.p&&RG3[g3i+1]?.p;const la4=g4&&!g4.p&&RG4[g4i+1]?.p;return{label,aG3:g3&&!g3.p?Math.log10(g3.c):null,pG3:g3&&(g3.p||la3)?Math.log10(g3.c):null,aG4:g4&&!g4.p?Math.log10(g4.c):null,pG4:g4&&(g4.p||la4)?Math.log10(g4.c):null,g3c:g3?.c,g4c:g4?.c,g3p:g3?.p,g4p:g4?.p};});
+
+const logT=[2,3,4,5,6,7,8,9,10];
+const fLCT=v=>({2:"$100",3:"$1K",4:"$10K",5:"$100K",6:"$1M",7:"$10M",8:"$100M",9:"$1B",10:"$10B"}[v]||"");
+const fL7T=v=>{const c=Math.pow(10,v);const n=to7(c);if(n<0.01)return`${(n*1000).toFixed(1)}e-3`;if(n<1)return n.toFixed(2);if(n<10)return n.toFixed(1);if(n<1000)return Math.round(n).toLocaleString();return`${(n/1000).toFixed(1)}K`;};
+const ref7=[1,10,100,1000].map(n=>({n,lc:Math.log10(n*B7C)}));
+const dCol=d=>{if(d.tag==="eff"||d.t==="eff")return P.green;if(d.tag==="xai"||d.t==="xai")return P.xai;if(d.tag==="meta"||d.t==="meta")return P.meta;return P.red;};
+
+// ═══════════════════════════════════════════════════════
+// TOOLTIPS
+// ═══════════════════════════════════════════════════════
+const ttStyle={background:"#0c0c1cee",border:`1px solid ${P.grid}`,borderRadius:8,padding:"11px 15px",fontSize:11,fontFamily:font,lineHeight:1.7,color:"#ccc",maxWidth:310,backdropFilter:"blur(12px)",boxShadow:"0 8px 32px #00000088"};
+
+const InfTT=({active,payload})=>{
+  if(!active||!payload?.length)return null;const d=payload[0].payload;
+  return(<div style={ttStyle}>
+    <div style={{color:d.proj?P.rose:P.cyan,fontWeight:600,fontSize:12,marginBottom:4}}>{d.label} — {d.model}</div>
+    <div>Cost/query: <span style={{color:P.cyan}}>{fCost(d.qc)}</span></div>
+    <div>Microwave equiv.: <span style={{color:P.amber}}>{fMW(d.mws)}</span></div>
+    <div style={{fontSize:10,color:P.dim}}>In: ${d.i}/M · Out: ${d.o}/M</div>
+    <div style={{color:"#667",fontSize:10,marginTop:4}}>{d.note}</div>
+    {d.proj&&<div style={{color:P.rose,fontSize:10,fontStyle:"italic",marginTop:2}}>▲ projected (HW roadmap)</div>}
+  </div>);
+};
+
+const TrainTT=({active,payload,isRep})=>{
+  if(!active||!payload?.length)return null;const d=payload[0].payload;
+  if(isRep)return(<div style={ttStyle}><div style={{color:"#fff",fontWeight:600,marginBottom:4}}>{d.label}</div>{d.g3c&&<div><span style={{color:P.cyan}}>GPT-3 level:</span> {fC(d.g3c)} → <span style={{color:P.steel}}>{f7(to7(d.g3c))} 777s</span>{d.g3p&&<span style={{color:P.dim}}> (est.)</span>}</div>}{d.g4c&&<div><span style={{color:P.gold}}>GPT-4 level:</span> {fC(d.g4c)} → <span style={{color:P.steel}}>{f7(to7(d.g4c))} 777s</span>{d.g4p&&<span style={{color:P.dim}}> (est.)</span>}</div>}</div>);
+  return(<div style={ttStyle}><div style={{color:d.proj?P.red:dCol(d),fontWeight:600,fontSize:12,marginBottom:4}}>{d.model} {d.proj&&"⌁"}</div><div>Cost: <span style={{color:"#fff"}}>{fC(d.cost)}</span></div><div>Energy: <span style={{color:P.gold}}>{fMh(toMW2(d.cost))}</span></div><div style={{marginTop:4,padding:"4px 0",borderTop:`1px solid ${P.grid}`}}><span style={{color:P.steel,fontSize:13,fontWeight:700}}>✈ {f7(d.n777)} Boeing 777{d.n777!==1?"s":""}</span><div style={{fontSize:9,color:P.dim,marginTop:2}}>(metal smelting energy equivalent)</div></div></div>);
+};
+
+// ═══════════════════════════════════════════════════════
+// SHARED UI COMPONENTS
+// ═══════════════════════════════════════════════════════
+const Pill=({active,onClick,children,accent})=>(
+  <button onClick={onClick} style={{
+    background:active?`${accent||P.cyan}18`:"transparent",
+    border:`1px solid ${active?accent||P.cyan:"#222"}`,
+    borderRadius:20,color:active?accent||P.cyan:"#556",
+    fontFamily:font,fontSize:10.5,fontWeight:active?600:400,
+    padding:"6px 16px",cursor:"pointer",transition:"all 0.2s",
+    letterSpacing:0.3,whiteSpace:"nowrap"
+  }}>{children}</button>
+);
+
+const ChartWrap=({children})=>(
+  <div style={{background:P.panel,borderRadius:10,border:"1px solid #1a1a30",padding:"20px 8px 8px 0",marginBottom:12}}>{children}</div>
+);
+
+const Legend=({items})=>(
+  <div style={{display:"flex",flexWrap:"wrap",gap:14,fontSize:10,color:P.dim,marginBottom:6}}>
+    {items.map((it,i)=><span key={i}>{it}</span>)}
+  </div>
+);
+
+// ═══════════════════════════════════════════════════════
+// MAIN APP
+// ═══════════════════════════════════════════════════════
+function App(){
+  const[section,setSection]=useState("inference");
+  const[infView,setInfView]=useState("cost");
+  const[trainTab,setTrainTab]=useState("frontier");
+
+  // inference y-axis
+  const infYKey=infView==="cost"?"aCL":"aML";
+  const infPKey=infView==="cost"?"pCL":"pML";
+  const infYLabel=infView==="cost"?"Cost per Query (USD)":"Microwave Oven Energy Equivalent";
+  const infYFmt=v=>{const val=Math.pow(10,v);return infView==="cost"?fCost(val):fMW(val);};
+  const infLogT=[-6,-5,-4,-3,-2,-1,0,1];
+
+  return(
+    <div style={{background:P.bg,minHeight:"100vh",padding:"28px 20px 60px"}}>
+      <div style={{maxWidth:940,margin:"0 auto"}}>
+
+        {/* ─── MASTHEAD ─── */}
+        <div style={{marginBottom:28,position:"relative"}}>
+          <div style={{position:"absolute",top:-40,right:0,width:300,height:300,background:"radial-gradient(circle,#ff446608 0%,transparent 70%)",pointerEvents:"none"}}/>
+          <div style={{fontSize:9,letterSpacing:4,color:P.dim,textTransform:"uppercase",marginBottom:8,fontWeight:500}}>
+            LLM Cost Observatory · Feb 2026
+          </div>
+          <h1 style={{fontFamily:hf,fontSize:30,fontWeight:700,color:"#fff",margin:0,lineHeight:1.15,letterSpacing:"-0.5px"}}>
+            The Diverging Scissors of AI Cost
+          </h1>
+          <p style={{fontSize:12,color:P.dim,marginTop:8,lineHeight:1.7,maxWidth:720}}>
+            Inference cost per query is collapsing (1,000× decline since 2022). Training cost for frontier models is exploding ($500M+ in 2025).
+            Both measured against physical-world energy equivalents.
+          </p>
+        </div>
+
+        {/* ─── SECTION SELECTOR ─── */}
+        <div style={{display:"flex",gap:6,marginBottom:24}}>
+          <Pill active={section==="inference"} onClick={()=>setSection("inference")} accent={P.cyan}>
+            ⚡ Inference Cost
+          </Pill>
+          <Pill active={section==="training"} onClick={()=>setSection("training")} accent={P.red}>
+            ✈ Training Cost × 777
+          </Pill>
+          <Pill active={section==="summary"} onClick={()=>setSection("summary")} accent={P.gold}>
+            📊 Combined Summary
+          </Pill>
+        </div>
+
+        {/* ═══════════════════════════════════════════ */}
+        {/* INFERENCE SECTION                          */}
+        {/* ═══════════════════════════════════════════ */}
+        {section==="inference"&&(<div>
+          <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:14}}>
+            <h2 style={{fontFamily:hf,fontSize:18,fontWeight:600,color:P.bright,margin:0}}>Inference Cost Decline</h2>
+            <div style={{display:"flex",gap:4}}>
+              <Pill active={infView==="cost"} onClick={()=>setInfView("cost")} accent={P.cyan}>$/query</Pill>
+              <Pill active={infView==="microwave"} onClick={()=>setInfView("microwave")} accent={P.amber}>🔥 Microwave</Pill>
+            </div>
+          </div>
+          <div style={{fontSize:11,color:P.dim,marginBottom:10}}>
+            Cost per query ({QI} input + {QO} output tokens) on cheapest frontier-capable model. Log scale.
+          </div>
+          <ChartWrap>
+            <ResponsiveContainer width="100%" height={440}>
+              <ComposedChart data={infData} margin={{top:10,right:30,left:20,bottom:20}}>
+                <defs>
+                  <linearGradient id="infA" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={P.cyan} stopOpacity={0.12}/><stop offset="100%" stopColor={P.cyan} stopOpacity={0}/></linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke={P.grid}/>
+                <XAxis dataKey="label" tick={{fill:"#556",fontSize:9,fontFamily:font}} stroke="#222" angle={-35} textAnchor="end" height={60}/>
+                <YAxis domain={[-6,1]} ticks={infLogT} tickFormatter={infYFmt} tick={{fill:"#556",fontSize:9,fontFamily:font}} stroke="#222" width={90}
+                  label={{value:infYLabel,angle:-90,position:"insideLeft",offset:10,style:{fill:"#445",fontSize:10,fontFamily:font}}}/>
+                <Tooltip content={<InfTT/>}/>
+                <Area dataKey={infYKey} stroke="none" fill="url(#infA)" connectNulls/>
+                <Line dataKey={infYKey} stroke={P.cyan} strokeWidth={2.5} dot={{r:4.5,fill:P.cyan,stroke:P.panel,strokeWidth:2}} connectNulls/>
+                <Line dataKey={infPKey} stroke={P.rose} strokeWidth={2} strokeDasharray="8 4" dot={{r:4,fill:P.rose,stroke:P.panel,strokeWidth:2}} connectNulls/>
+                {infView==="microwave"&&<ReferenceLine y={Math.log10(5)} stroke={`${P.amber}66`} strokeDasharray="4 4"
+                  label={{value:"≈ heat one bite of soup",position:"right",fill:P.amber,fontSize:9,fontFamily:font}}/>}
+              </ComposedChart>
+            </ResponsiveContainer>
+          </ChartWrap>
+          <Legend items={[
+            <span><span style={{color:P.cyan}}>━━</span> Actual</span>,
+            <span><span style={{color:P.rose}}>╌╌</span> Projected (NVIDIA roadmap)</span>,
+          ]}/>
+
+          {/* Inference data table */}
+          <details style={{marginTop:16}}>
+            <summary style={{cursor:"pointer",color:P.dim,fontSize:11,fontWeight:500,marginBottom:8}}>▸ Raw inference data</summary>
+            <div style={{overflowX:"auto"}}>
+              <table style={{width:"100%",borderCollapse:"collapse",fontSize:10.5,lineHeight:1.5}}>
+                <thead><tr style={{borderBottom:"1px solid #222"}}>{["Date","Model","$/query","Microwave equiv.",""].map((h,i)=>(<th key={i} style={{textAlign:"left",padding:"6px 10px",color:"#445",fontWeight:500}}>{h}</th>))}</tr></thead>
+                <tbody>{infData.map((d,i)=>(<tr key={i} style={{borderBottom:`1px solid ${P.grid}`,opacity:d.proj?0.6:1}}>
+                  <td style={{padding:"5px 10px",color:"#889"}}>{d.label}</td>
+                  <td style={{padding:"5px 10px",color:d.proj?P.rose:P.cyan,fontWeight:500}}>{d.model}{d.proj&&" ⌁"}</td>
+                  <td style={{padding:"5px 10px",color:"#fff",fontWeight:500}}>{fCost(d.qc)}</td>
+                  <td style={{padding:"5px 10px",color:P.amber}}>{fMW(d.mws)}</td>
+                  <td style={{padding:"5px 10px",color:"#334",fontSize:10}}>{d.note}</td>
+                </tr>))}</tbody>
+              </table>
+            </div>
+          </details>
+        </div>)}
+
+        {/* ═══════════════════════════════════════════ */}
+        {/* TRAINING SECTION                           */}
+        {/* ═══════════════════════════════════════════ */}
+        {section==="training"&&(<div>
+          <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:14,flexWrap:"wrap"}}>
+            <h2 style={{fontFamily:hf,fontSize:18,fontWeight:600,color:P.bright,margin:0}}>Training Cost → 777 Smelting</h2>
+            <div style={{display:"flex",gap:4}}>
+              <Pill active={trainTab==="frontier"} onClick={()=>setTrainTab("frontier")} accent={P.red}>Frontier</Pill>
+              <Pill active={trainTab==="replication"} onClick={()=>setTrainTab("replication")} accent={P.gold}>Replication</Pill>
+              <Pill active={trainTab==="equiv"} onClick={()=>setTrainTab("equiv")} accent={P.steel}>Equivalences</Pill>
+            </div>
+          </div>
+          <div style={{fontSize:11,color:P.dim,marginBottom:10}}>
+            1 Boeing 777-300ER = 149t metal → <span style={{color:P.gold}}>3,100 MWh</span> smelting energy → <span style={{color:P.gold}}>$465K</span> electricity.
+          </div>
+
+          {/* FRONTIER */}
+          {trainTab==="frontier"&&(<div>
+            <ChartWrap>
+              <ResponsiveContainer width="100%" height={500}>
+                <ComposedChart data={frontier} margin={{top:10,right:80,left:25,bottom:30}}>
+                  <defs><linearGradient id="fa" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={P.red} stopOpacity={0.1}/><stop offset="100%" stopColor={P.red} stopOpacity={0}/></linearGradient></defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke={P.grid}/>
+                  <XAxis dataKey="label" tick={{fill:"#556",fontSize:9,fontFamily:font}} stroke="#222" angle={-45} textAnchor="end" height={65}/>
+                  <YAxis yAxisId="c" domain={[2,10]} ticks={logT} tickFormatter={fLCT} tick={{fill:"#556",fontSize:9,fontFamily:font}} stroke="#222" width={65}
+                    label={{value:"Training Cost (USD)",angle:-90,position:"insideLeft",offset:5,style:{fill:"#445",fontSize:10,fontFamily:font}}}/>
+                  <YAxis yAxisId="p" orientation="right" domain={[2,10]} ticks={logT} tickFormatter={fL7T} tick={{fill:P.steel,fontSize:9,fontFamily:font}} stroke="#222" width={65}
+                    label={{value:"✈ Boeing 777s (metal smelting)",angle:90,position:"insideRight",offset:5,style:{fill:P.steel,fontSize:10,fontFamily:font}}}/>
+                  <Tooltip content={<TrainTT/>}/>
+                  {ref7.filter(r=>r.lc>=2&&r.lc<=10).map(r=>(<ReferenceLine key={r.n} yAxisId="c" y={r.lc} stroke={P.steel} strokeOpacity={0.2} strokeDasharray="6 4" label={{value:`${r.n.toLocaleString()} 777${r.n>1?"s":""}`,position:"insideTopLeft",fill:P.steel,fontSize:9,fontFamily:font}}/>))}
+                  <Area yAxisId="c" dataKey="actualLog" stroke="none" fill="url(#fa)" connectNulls/>
+                  <Line yAxisId="c" dataKey="actualLog" stroke={P.red} strokeWidth={2.5} dot={props=>{const{cx,cy,payload}=props;if(cx==null||cy==null)return null;return(<circle key={payload.label} cx={cx} cy={cy} r={payload.tag==="eff"?6:5} fill={dCol(payload)} stroke={P.panel} strokeWidth={2}/>);}} connectNulls/>
+                  <Line yAxisId="c" dataKey="projLog" stroke={P.red} strokeWidth={2} strokeDasharray="8 4" dot={{r:4,fill:P.red,stroke:P.panel,strokeWidth:2}} connectNulls/>
+                </ComposedChart>
+              </ResponsiveContainer>
+            </ChartWrap>
+            <Legend items={[
+              <span><span style={{color:P.red}}>━━</span> Frontier <span style={{color:P.red}}>╌╌</span> proj.</span>,
+              <span><span style={{color:P.green}}>●</span> Efficient (DS V3/R1, GPT-4o)</span>,
+              <span><span style={{color:P.xai}}>●</span> xAI (Grok 3/4)</span>,
+              <span><span style={{color:P.meta}}>●</span> Meta (Llama)</span>,
+              <span><span style={{color:P.steel}}>┄┄</span> 777 ref. lines</span>,
+            ]}/>
+          </div>)}
+
+          {/* REPLICATION */}
+          {trainTab==="replication"&&(<div>
+            <ChartWrap>
+              <ResponsiveContainer width="100%" height={480}>
+                <ComposedChart data={repData} margin={{top:10,right:80,left:25,bottom:25}}>
+                  <CartesianGrid strokeDasharray="3 3" stroke={P.grid}/>
+                  <XAxis dataKey="label" tick={{fill:"#556",fontSize:10,fontFamily:font}} stroke="#222" angle={-35} textAnchor="end" height={60}/>
+                  <YAxis yAxisId="c" domain={[3,8]} ticks={[3,4,5,6,7,8]} tickFormatter={fLCT} tick={{fill:"#556",fontSize:9,fontFamily:font}} stroke="#222" width={65}
+                    label={{value:"Replication Cost (USD)",angle:-90,position:"insideLeft",offset:5,style:{fill:"#445",fontSize:10,fontFamily:font}}}/>
+                  <YAxis yAxisId="p" orientation="right" domain={[3,8]} ticks={[3,4,5,6,7,8]} tickFormatter={fL7T} tick={{fill:P.steel,fontSize:9,fontFamily:font}} stroke="#222" width={65}
+                    label={{value:"✈ Boeing 777s",angle:90,position:"insideRight",offset:5,style:{fill:P.steel,fontSize:10,fontFamily:font}}}/>
+                  <Tooltip content={<TrainTT isRep/>}/>
+                  {ref7.filter(r=>r.lc>=3&&r.lc<=8).map(r=>(<ReferenceLine key={r.n} yAxisId="c" y={r.lc} stroke={P.steel} strokeOpacity={0.2} strokeDasharray="6 4" label={{value:`${r.n.toLocaleString()} 777${r.n>1?"s":""}`,position:"insideTopLeft",fill:P.steel,fontSize:9,fontFamily:font}}/>))}
+                  <Line yAxisId="c" dataKey="aG3" stroke={P.cyan} strokeWidth={2.5} dot={{r:5,fill:P.cyan,stroke:P.panel,strokeWidth:2}} connectNulls/>
+                  <Line yAxisId="c" dataKey="pG3" stroke={P.cyan} strokeWidth={2} strokeDasharray="8 4" dot={{r:4,fill:P.cyan,stroke:P.panel,strokeWidth:2}} connectNulls/>
+                  <Line yAxisId="c" dataKey="aG4" stroke={P.gold} strokeWidth={2.5} dot={{r:5,fill:P.gold,stroke:P.panel,strokeWidth:2}} connectNulls/>
+                  <Line yAxisId="c" dataKey="pG4" stroke={P.gold} strokeWidth={2} strokeDasharray="8 4" dot={{r:4,fill:P.gold,stroke:P.panel,strokeWidth:2}} connectNulls/>
+                </ComposedChart>
+              </ResponsiveContainer>
+            </ChartWrap>
+            <Legend items={[
+              <span><span style={{color:P.cyan}}>━━</span> GPT-3 level <span style={{color:P.cyan}}>╌╌</span> proj.</span>,
+              <span><span style={{color:P.gold}}>━━</span> GPT-4 level <span style={{color:P.gold}}>╌╌</span> proj.</span>,
+            ]}/>
+          </div>)}
+
+          {/* EQUIVALENCES */}
+          {trainTab==="equiv"&&(<div>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(165px, 1fr))",gap:10,marginBottom:20}}>
+              {[{m:"GPT-4",c:78e6,cl:P.red},{m:"Grok 4",c:490e6,cl:P.xai},{m:"GPT-5",c:500e6,cl:P.purple},{m:"2027 Frontier",c:2e9,cl:P.gold}].map(x=>(<div key={x.m} style={{background:P.card,border:`1px solid ${x.cl}22`,borderRadius:10,padding:"14px 12px",textAlign:"center"}}>
+                <div style={{fontSize:9,color:P.dim,letterSpacing:1,textTransform:"uppercase"}}>{x.m}</div>
+                <div style={{fontSize:24,fontWeight:700,color:x.cl,marginTop:4,fontFamily:hf}}>{Math.round(to7(x.c)).toLocaleString()}</div>
+                <div style={{fontSize:10,color:P.steel}}>Boeing 777s</div>
+                <div style={{fontSize:9,color:P.dim,marginTop:3}}>{fC(x.c)}</div>
+              </div>))}
+            </div>
+            <div style={{background:P.card,border:"1px solid #1a1a30",borderRadius:10,padding:"16px 18px",marginBottom:20}}>
+              <div style={{fontSize:12,fontWeight:600,color:"#fff",marginBottom:10,fontFamily:hf}}>✈ Boeing 777-300ER Metal Breakdown</div>
+              <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(120px, 1fr))",gap:10,fontSize:10.5}}>
+                {[{n:"Aluminum",k:"117,600",p:"70%",e:"1,764 MWh",cl:P.blue},{n:"Titanium",k:"11,760",p:"7%",e:"1,176 MWh",cl:"#ff6644"},{n:"Steel",k:"18,480",p:"11%",e:"148 MWh",cl:P.steel}].map(x=>(<div key={x.n} style={{padding:"6px 0"}}><div style={{color:x.cl,fontWeight:600,marginBottom:1}}>{x.n}</div><div style={{color:"#aab"}}>{x.k} kg ({x.p})</div><div style={{color:P.dim}}>{x.e}</div></div>))}
+                <div style={{padding:"6px 0",borderLeft:`2px solid ${P.gold}`,paddingLeft:12}}><div style={{color:P.gold,fontWeight:700}}>TOTAL</div><div style={{color:"#fff",fontWeight:600}}>148,680 kg</div><div style={{color:P.gold,fontWeight:600}}>3,100 MWh → $465K</div></div>
+              </div>
+            </div>
+            <div style={{overflowX:"auto"}}>
+              <table style={{width:"100%",borderCollapse:"collapse",fontSize:10.5,lineHeight:1.5}}>
+                <thead><tr style={{borderBottom:"1px solid #222"}}>{["Date","Model","Cost","Energy","✈ 777s","Context"].map((h,i)=>(<th key={i} style={{textAlign:"left",padding:"6px 10px",color:"#445",fontWeight:500}}>{h}</th>))}</tr></thead>
+                <tbody>{FR.map((d,i)=>{const n=to7(d.c);const mwh=toMW2(d.c);let ctx="";if(n<0.01)ctx="A few wing ribs";else if(n<0.1)ctx="Partial fuselage";else if(n<1)ctx="One airframe's metal";else if(n<10)ctx="Small fleet";else if(n<100)ctx="Mid-size airline fleet";else if(n<500)ctx="Exceeds any single operator";else if(n<2000)ctx="Rivals global 777 fleet (~1,700)";else ctx="Exceeds all 777s ever built";return(<tr key={i} style={{borderBottom:`1px solid ${P.grid}`,opacity:d.p?0.6:1}}>
+                  <td style={{padding:"4px 10px",color:"#889",fontSize:10}}>{d.l}</td>
+                  <td style={{padding:"4px 10px",color:dCol(d),fontWeight:500}}>{d.m}{d.p&&" ⌁"}</td>
+                  <td style={{padding:"4px 10px",color:"#fff",fontWeight:500}}>{fC(d.c)}</td>
+                  <td style={{padding:"4px 10px",color:P.gold}}>{fMh(mwh)}</td>
+                  <td style={{padding:"4px 10px",color:P.steel,fontWeight:700,fontSize:12}}>{f7(n)}</td>
+                  <td style={{padding:"4px 10px",color:P.dim,fontStyle:"italic",fontSize:9.5}}>{ctx}</td>
+                </tr>);})}</tbody>
+              </table>
+            </div>
+          </div>)}
+        </div>)}
+
+        {/* ═══════════════════════════════════════════ */}
+        {/* COMBINED SUMMARY                           */}
+        {/* ═══════════════════════════════════════════ */}
+        {section==="summary"&&(<div>
+          <h2 style={{fontFamily:hf,fontSize:18,fontWeight:600,color:P.bright,marginBottom:16}}>The Scissors Effect</h2>
+
+          {/* Stat cards */}
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(220px, 1fr))",gap:12,marginBottom:28}}>
+            <div style={{background:P.card,border:`1px solid ${P.cyan}22`,borderRadius:12,padding:"20px"}}>
+              <div style={{fontSize:9,letterSpacing:2,color:P.dim,textTransform:"uppercase",marginBottom:8}}>Inference Cost / Query</div>
+              <div style={{display:"flex",alignItems:"baseline",gap:8}}>
+                <span style={{fontSize:12,color:"#889"}}>Nov 2022</span>
+                <span style={{fontSize:20,fontWeight:700,color:P.cyan,fontFamily:hf}}>$0.060</span>
+              </div>
+              <div style={{display:"flex",alignItems:"center",gap:6,margin:"6px 0"}}>
+                <div style={{flex:1,height:1,background:`linear-gradient(to right, ${P.cyan}, ${P.green})`}}/>
+                <span style={{fontSize:10,color:P.green}}>~4,000× cheaper</span>
+                <div style={{flex:1,height:1,background:`linear-gradient(to right, ${P.green}, ${P.cyan})`}}/>
+              </div>
+              <div style={{display:"flex",alignItems:"baseline",gap:8}}>
+                <span style={{fontSize:12,color:"#889"}}>Dec 2025</span>
+                <span style={{fontSize:20,fontWeight:700,color:P.green,fontFamily:hf}}>$0.000015</span>
+              </div>
+              <div style={{fontSize:10,color:P.dim,marginTop:10,lineHeight:1.6}}>
+                From <span style={{color:P.amber}}>24 min</span> to <span style={{color:P.amber}}>0.4 ms</span> of microwave oven energy equivalent.
+                By 2027 projected: <span style={{color:P.rose}}>$0.000001</span> — energy of a camera flash.
+              </div>
+            </div>
+
+            <div style={{background:P.card,border:`1px solid ${P.red}22`,borderRadius:12,padding:"20px"}}>
+              <div style={{fontSize:9,letterSpacing:2,color:P.dim,textTransform:"uppercase",marginBottom:8}}>Frontier Training Cost</div>
+              <div style={{display:"flex",alignItems:"baseline",gap:8}}>
+                <span style={{fontSize:12,color:"#889"}}>2020</span>
+                <span style={{fontSize:20,fontWeight:700,color:P.red,fontFamily:hf}}>$4.6M</span>
+              </div>
+              <div style={{display:"flex",alignItems:"center",gap:6,margin:"6px 0"}}>
+                <div style={{flex:1,height:1,background:`linear-gradient(to right, ${P.red}, ${P.xai})`}}/>
+                <span style={{fontSize:10,color:P.xai}}>~110× more expensive</span>
+                <div style={{flex:1,height:1,background:`linear-gradient(to right, ${P.xai}, ${P.red})`}}/>
+              </div>
+              <div style={{display:"flex",alignItems:"baseline",gap:8}}>
+                <span style={{fontSize:12,color:"#889"}}>2025</span>
+                <span style={{fontSize:20,fontWeight:700,color:P.xai,fontFamily:hf}}>$500M</span>
+              </div>
+              <div style={{fontSize:10,color:P.dim,marginTop:10,lineHeight:1.6}}>
+                From <span style={{color:P.steel}}>10 Boeing 777s</span> to <span style={{color:P.steel}}>1,075 Boeing 777s</span> of metal smelting energy.
+                By 2027 projected: <span style={{color:P.rose}}>$2B</span> — <span style={{color:P.steel}}>4,300 airframes</span>, exceeding all 777s ever built.
+              </div>
+            </div>
+
+            <div style={{background:P.card,border:`1px solid ${P.gold}22`,borderRadius:12,padding:"20px"}}>
+              <div style={{fontSize:9,letterSpacing:2,color:P.dim,textTransform:"uppercase",marginBottom:8}}>The Ratio</div>
+              <div style={{fontSize:10,color:"#889",lineHeight:1.7,marginBottom:8}}>
+                How many inference queries could you buy for the cost of one frontier training run?
+              </div>
+              <div style={{display:"grid",gap:6}}>
+                {[
+                  {y:"2023",train:"GPT-4 ($78M)",q:78e6/0.06,qf:"1.3B"},
+                  {y:"2025",train:"GPT-5 ($500M)",q:500e6/0.000015,qf:"33T"},
+                  {y:"2027",train:"Frontier ($2B)",q:2e9/0.000001,qf:"2,000T"},
+                ].map(r=>(<div key={r.y} style={{display:"flex",justifyContent:"space-between",padding:"4px 0",borderBottom:`1px solid ${P.grid}`}}>
+                  <span style={{color:"#889",fontSize:11}}>{r.y} — {r.train}</span>
+                  <span style={{color:P.gold,fontWeight:600,fontSize:12}}>{r.qf} queries</span>
+                </div>))}
+              </div>
+              <div style={{fontSize:10,color:P.dim,marginTop:10}}>
+                The gap between training and inference cost is widening by ~3 orders of magnitude every 2 years.
+              </div>
+            </div>
+          </div>
+
+          {/* Key insight */}
+          <div style={{background:`linear-gradient(135deg, ${P.card} 0%, #161630 100%)`,border:"1px solid #1a1a40",borderRadius:12,padding:"24px 28px",marginBottom:20}}>
+            <div style={{fontSize:14,fontWeight:600,color:P.bright,fontFamily:hf,marginBottom:10}}>Why it matters</div>
+            <div style={{fontSize:11.5,color:"#99a",lineHeight:1.8}}>
+              The economics of AI are splitting into two distinct regimes. <span style={{color:P.cyan}}>Using</span> frontier intelligence is approaching near-zero marginal cost — a single query that once cost more than heating a bowl of soup now costs less than firing a single neuron. Meanwhile, <span style={{color:P.red}}>creating</span> that intelligence demands industrial-scale energy commitments that rival smelting the metal for entire airline fleets.
+              <br/><br/>
+              This divergence has structural implications: inference commoditizes rapidly (enabling ubiquitous deployment), while training concentrates into fewer organizations that can marshal the capital. The <span style={{color:P.green}}>efficient outliers</span> like DeepSeek demonstrate that algorithmic innovation can partially counteract this concentration — training a GPT-4-class model for $5.6M (12 Boeing 777s) vs. $78M (168 Boeing 777s) — but the frontier itself keeps moving upward.
+            </div>
+          </div>
+        </div>)}
+
+        {/* ═══════════════════════════════════════════ */}
+        {/* FOOTER ASSUMPTIONS                         */}
+        {/* ═══════════════════════════════════════════ */}
+        <div style={{marginTop:32,padding:"16px 20px",background:P.card,borderRadius:8,border:"1px solid #1a1a30",fontSize:9.5,color:"#445",lineHeight:1.8}}>
+          <strong style={{color:"#667"}}>Assumptions & sources (updated Feb 2026)</strong><br/>
+          <strong style={{color:"#556"}}>Inference:</strong> Query = {QI} input + {QO} output tokens. Microwave = {MW_WATTS}W. Electricity = ${ELEC_R}/kWh US avg.
+          Frontier model = cheapest achieving GPT-4-class benchmarks at each date. Projections: NVIDIA Blackwell→Vera Rubin→Rubin Ultra HW roadmap.
+          Sources: OpenAI pricing, Epoch AI, a16z LLMflation, DeepSeek announcements, NVIDIA roadmaps.<br/>
+          <strong style={{color:"#556"}}>Training:</strong> 777-300ER: OEW ~168t → 70% Al, 7% Ti, 11% steel = 148.7t metal. Smelting: Al=15, Ti=100, Steel=8 kWh/kg → 3,100 MWh = $465K @ $0.15/kWh.
+          Grok 4: $490M median (Epoch AI, Sep 2025, 246M H100-hours). GPT-4.5: ~$400M (Epoch). GPT-5: ~$500M/run (industry reports).
+          Grok 3: ~$300M (100K H100s × 122d). DeepSeek V3: $5.6M (reported); R1: ~$10M est.
+          All costs compute-only (excl. staff, experiments, data). Projections: Epoch AI 2.4×/yr growth.
+        </div>
+      </div>
+    </div>
+  );
+}
+ReactDOM.render(<App/>,document.getElementById('root'));
+</script>
+</body>
+</html>
