@@ -255,14 +255,14 @@ const TrainTT=({active,payload,isRep})=>{
 // ═══════════════════════════════════════════════════════
 // SHARED UI COMPONENTS
 // ═══════════════════════════════════════════════════════
-const Pill=({active,onClick,children,accent})=>(
+const Pill=({active,onClick,children,accent,style:sx})=>(
   <button onClick={onClick} style={{
     background:active?`${accent||P.cyan}18`:"transparent",
     border:`1px solid ${active?accent||P.cyan:"#222"}`,
     borderRadius:20,color:active?accent||P.cyan:"#556",
     fontFamily:font,fontSize:10.5,fontWeight:active?600:400,
     padding:"6px 16px",cursor:"pointer",transition:"all 0.2s",
-    letterSpacing:0.3,whiteSpace:"nowrap"
+    letterSpacing:0.3,whiteSpace:"nowrap",...(sx||{})
   }}>{children}</button>
 );
 
@@ -312,17 +312,17 @@ function App(){
         </div>
 
         {/* ─── SECTION SELECTOR ─── */}
-        <div style={{display:"flex",gap:6,marginBottom:24}}>
-          <Pill active={section==="inference"} onClick={()=>setSection("inference")} accent={P.cyan}>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,marginBottom:24}}>
+          <Pill active={section==="inference"} onClick={()=>setSection("inference")} accent={P.cyan} style={{width:"100%"}}>
             ⚡ Inference Cost
           </Pill>
-          <Pill active={section==="training"} onClick={()=>setSection("training")} accent={P.red}>
+          <Pill active={section==="training"} onClick={()=>setSection("training")} accent={P.red} style={{width:"100%"}}>
             ✈ Training Cost × 777
           </Pill>
-          <Pill active={section==="tuning"} onClick={()=>setSection("tuning")} accent={P.purple}>
+          <Pill active={section==="tuning"} onClick={()=>setSection("tuning")} accent={P.purple} style={{width:"100%"}}>
             {"\uD83D\uDD27 Fine-Tuning Cost"}
           </Pill>
-          <Pill active={section==="summary"} onClick={()=>setSection("summary")} accent={P.gold}>
+          <Pill active={section==="summary"} onClick={()=>setSection("summary")} accent={P.gold} style={{width:"100%"}}>
             📊 Combined Summary
           </Pill>
         </div>
@@ -467,7 +467,7 @@ function App(){
             <div style={{overflowX:"auto"}}>
               <table style={{width:"100%",borderCollapse:"collapse",fontSize:10.5,lineHeight:1.5}}>
                 <thead><tr style={{borderBottom:"1px solid #222"}}>{["Date","Model","Cost","Energy","✈ 777s","Context"].map((h,i)=>(<th key={i} style={{textAlign:"left",padding:"6px 10px",color:"#445",fontWeight:500}}>{h}</th>))}</tr></thead>
-                <tbody>{FR.map((d,i)=>{const n=to7g(d.gwh);let ctx="";if(n<0.01)ctx="A few wing ribs";else if(n<0.1)ctx="Partial fuselage";else if(n<1)ctx="One airframe's metal";else if(n<10)ctx="Small fleet's metal";else if(n<100)ctx="Mid-size airline fleet";else if(n<500)ctx="Rivals global 777 fleet (~1,700)";else ctx="Exceeds all 777s ever built";return(<tr key={i} style={{borderBottom:`1px solid ${P.grid}`,opacity:d.p?0.6:1}}>
+                <tbody>{FR.map((d,i)=>{const n=to7g(d.gwh);let ctx="";if(n<0.01)ctx="A few wing ribs";else if(n<0.1)ctx="Partial fuselage";else if(n<1)ctx="One airframe's metal";else if(n<5)ctx="Small fleet";else if(n<25)ctx="Regional airline fleet";else if(n<100)ctx="Major airline fleet";else if(n<300)ctx="Substantial fraction of global 777 fleet";else ctx="~28% of all 777s ever delivered (~1,700)";return(<tr key={i} style={{borderBottom:`1px solid ${P.grid}`,opacity:d.p?0.6:1}}>
                   <td style={{padding:"4px 10px",color:"#889",fontSize:10}}>{d.l}</td>
                   <td style={{padding:"4px 10px",color:dCol(d),fontWeight:500}}>{d.m}{d.p&&" ⌁"}</td>
                   <td style={{padding:"4px 10px",color:"#fff",fontWeight:500}}>{fC(d.c)}</td>
