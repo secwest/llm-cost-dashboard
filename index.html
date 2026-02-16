@@ -92,29 +92,34 @@ const fMh=v=>{if(v>=1e6)return`${(v/1e6).toFixed(1)}M MWh`;if(v>=1e3)return`${(v
 
 // gwh = actual training energy in GWh. Sources:
 // pub = published/widely cited, epoch = Epoch AI direct, calc = from GPU-hours,
-// est = estimated from cost fraction or similar models, proj = projected ~2.5×/yr
+// est = estimated from cost fraction or similar models, proj = projected
+// Energy/FLOP improves ~1.5-2×/generation (HW efficiency + FP8/FP4 adoption).
+// Cost/FLOP drops slower (~1.3×/gen) due to GPU pricing, margins, non-compute overhead.
+// Result: energy grows SLOWER than cost for frontier models (lines diverge).
 const FR=[
   {l:"2017",m:"Transformer",c:900,gwh:0.000001,p:false,t:null},
   {l:"2018",m:"BERT",c:7000,gwh:0.001,p:false,t:null},
   {l:"2019",m:"GPT-2",c:50000,gwh:0.003,p:false,t:null},
-  {l:"2020",m:"GPT-3",c:4600000,gwh:1.3,p:false,t:null},         // pub: widely cited
-  {l:"2022 Q1",m:"PaLM",c:12000000,gwh:24,p:false,t:null},       // est: 6K TPUv4 × 90d
-  {l:"2022 Q3",m:"Chinchilla",c:3000000,gwh:3,p:false,t:null},
-  {l:"2023 Q1",m:"GPT-4",c:78000000,gwh:50,p:false,t:null},      // pub: 25K A100 × 100d
-  {l:"2023 Q4",m:"Gemini Ultra",c:191000000,gwh:34,p:false,t:null}, // est: TPUv5p efficient
-  {l:"2024 Q2",m:"Llama 3.1 405B",c:60000000,gwh:27,p:false,t:"meta"}, // calc: 16K H100 × 54d
-  {l:"2024 Q2·",m:"GPT-4o",c:30000000,gwh:12,p:false,t:"eff"},
-  {l:"2024 Q4",m:"DeepSeek V3",c:5576000,gwh:3.6,p:false,t:"eff"}, // calc: 2.8M H800-hrs
-  {l:"2025 Q1",m:"Grok 3",c:300000000,gwh:60,p:false,t:"xai"},    // est: 100K H100 × 122d
-  {l:"2025 Q1·",m:"GPT-4.5",c:400000000,gwh:100,p:false,t:null},
-  {l:"2025 Q1··",m:"DeepSeek R1",c:10000000,gwh:5,p:false,t:"eff"},
-  {l:"2025 Q3",m:"Grok 4",c:490000000,gwh:310,p:false,t:"xai"},   // epoch: 246M H100-hrs
-  {l:"2025 Q3·",m:"GPT-5",c:500000000,gwh:200,p:false,t:null},
-  {l:"2026",m:"Frontier (est.)",c:800000000,gwh:600,p:true,t:null},  // proj
-  {l:"2027",m:"Frontier (est.)",c:2000000000,gwh:1500,p:true,t:null}, // proj
+  {l:"2020",m:"GPT-3",c:4600000,gwh:1.3,p:false,t:null},             // pub: widely cited
+  {l:"2022 Q1",m:"PaLM",c:12000000,gwh:4,p:false,t:null},            // calc: 12M TPUv4-hrs × 0.35 kWh
+  {l:"2022 Q3",m:"Chinchilla",c:3000000,gwh:1,p:false,t:null},       // est: ~1/4 PaLM compute
+  {l:"2023 Q1",m:"GPT-4",c:78000000,gwh:50,p:false,t:null},          // pub: 25K A100 × 100d
+  {l:"2023 Q4",m:"Gemini Ultra",c:191000000,gwh:17,p:false,t:null},   // est: TPUv5p ~65% energy/FLOP vs A100
+  {l:"2024 Q2",m:"Llama 3.1 405B",c:60000000,gwh:27,p:false,t:"meta"}, // calc: 16K H100 × 54d × 1.26 kWh
+  {l:"2024 Q2·",m:"GPT-4o",c:30000000,gwh:8,p:false,t:"eff"},        // est: ~1/6 GPT-4 compute
+  {l:"2024 Q4",m:"DeepSeek V3",c:5576000,gwh:3.1,p:false,t:"eff"},   // calc: 2.8M H800-hrs × 1.10 kWh
+  {l:"2025 Q1",m:"Grok 3",c:300000000,gwh:126,p:false,t:"xai"},      // calc: 100M H100-hrs × 1.26 kWh
+  {l:"2025 Q1·",m:"GPT-4.5",c:400000000,gwh:70,p:false,t:null},      // est: partial FP8 training
+  {l:"2025 Q1··",m:"DeepSeek R1",c:10000000,gwh:5,p:false,t:"eff"},   // est: 4M H800-hrs
+  {l:"2025 Q3",m:"Grok 4",c:490000000,gwh:310,p:false,t:"xai"},      // epoch: 246M H100-hrs (ANCHOR)
+  {l:"2025 Q3·",m:"GPT-5",c:500000000,gwh:130,p:false,t:null},       // est: partial B200, heavy RL post-train
+  {l:"2026",m:"Frontier (est.)",c:800000000,gwh:330,p:true,t:null},   // proj: B200 ~2× eff/FLOP, ~2× compute
+  {l:"2027",m:"Frontier (est.)",c:2000000000,gwh:700,p:true,t:null},  // proj: Rubin ~1.5× eff over B200
 ];
-const RG3=[{l:"2020",c:4600000,gwh:1.3,p:false},{l:"2022",c:450000,gwh:0.09,p:false},{l:"2023",c:200000,gwh:0.04,p:false},{l:"2024 Q1",c:100000,gwh:0.02,p:false},{l:"2024 Q4",c:50000,gwh:0.01,p:false},{l:"2025",c:25000,gwh:0.005,p:false},{l:"2026",c:10000,gwh:0.002,p:true},{l:"2027",c:3000,gwh:0.0006,p:true}];
-const RG4=[{l:"2023 Q1",c:78000000,gwh:50,p:false},{l:"2023 Q4",c:20000000,gwh:4,p:false},{l:"2024 Q4",c:5576000,gwh:3.6,p:false},{l:"2025 Q1",c:3000000,gwh:0.6,p:false},{l:"2026",c:1000000,gwh:0.2,p:true},{l:"2027",c:300000,gwh:0.06,p:true}];
+// Replication: fixed capability target. Cost drops via cheaper HW + algorithmic gains.
+// Energy drops too, but slower — cost/FLOP improves faster than energy/FLOP.
+const RG3=[{l:"2020",c:4600000,gwh:1.3,p:false},{l:"2022",c:450000,gwh:0.5,p:false},{l:"2023",c:200000,gwh:0.3,p:false},{l:"2024 Q1",c:100000,gwh:0.15,p:false},{l:"2024 Q4",c:50000,gwh:0.08,p:false},{l:"2025",c:25000,gwh:0.04,p:false},{l:"2026",c:10000,gwh:0.015,p:true},{l:"2027",c:3000,gwh:0.005,p:true}];
+const RG4=[{l:"2023 Q1",c:78000000,gwh:50,p:false},{l:"2023 Q4",c:20000000,gwh:35,p:false},{l:"2024 Q4",c:5576000,gwh:3.1,p:false},{l:"2025 Q1",c:3000000,gwh:1.5,p:false},{l:"2026",c:1000000,gwh:0.5,p:true},{l:"2027",c:300000,gwh:0.15,p:true}];
 
 const frontier=FR.map((d,i,a)=>{const lc=Math.log10(d.c);const lg=d.gwh>0?Math.log10(d.gwh):null;const la=!d.p&&a[i+1]?.p;return{...d,n777:to7g(d.gwh),logCost:lc,logGWh:lg,label:d.l,model:d.m,cost:d.c,gwh:d.gwh,proj:d.p,tag:d.t,actualLog:!d.p?lc:null,projLog:d.p||la?lc:null,actualGWh:!d.p&&lg!=null?lg:null,projGWh:(d.p||la)&&lg!=null?lg:null};});
 
@@ -490,7 +495,7 @@ function App(){
           {/* EQUIVALENCES */}
           {trainTab==="equiv"&&(<div>
             <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(165px, 1fr))",gap:10,marginBottom:20}}>
-              {[{m:"GPT-4",c:78e6,gwh:50,cl:P.red},{m:"Grok 4",c:490e6,gwh:310,cl:P.xai},{m:"GPT-5",c:500e6,gwh:200,cl:P.purple},{m:"2027 Frontier",c:2e9,gwh:1500,cl:P.gold}].map(x=>(<div key={x.m} style={{background:P.card,border:`1px solid ${x.cl}22`,borderRadius:10,padding:"14px 12px",textAlign:"center"}}>
+              {[{m:"GPT-4",c:78e6,gwh:50,cl:P.red},{m:"Grok 4",c:490e6,gwh:310,cl:P.xai},{m:"GPT-5",c:500e6,gwh:130,cl:P.purple},{m:"2027 Frontier",c:2e9,gwh:700,cl:P.gold}].map(x=>(<div key={x.m} style={{background:P.card,border:`1px solid ${x.cl}22`,borderRadius:10,padding:"14px 12px",textAlign:"center"}}>
                 <div style={{fontSize:9,color:P.dim,letterSpacing:1,textTransform:"uppercase"}}>{x.m}</div>
                 <div style={{fontSize:24,fontWeight:700,color:x.cl,marginTop:4,fontFamily:hf}}>{Math.round(to7g(x.gwh)).toLocaleString()}</div>
                 <div style={{fontSize:10,color:P.steel}}>Boeing 777s</div>
@@ -507,7 +512,7 @@ function App(){
             <div style={{overflowX:"auto"}}>
               <table style={{width:"100%",borderCollapse:"collapse",fontSize:10.5,lineHeight:1.5}}>
                 <thead><tr style={{borderBottom:"1px solid #222"}}>{["Date","Model","Cost","Energy","✈ 777s","Context"].map((h,i)=>(<th key={i} style={{textAlign:"left",padding:"6px 10px",color:"#ccd",fontWeight:500}}>{h}</th>))}</tr></thead>
-                <tbody>{FR.map((d,i)=>{const n=to7g(d.gwh);let ctx="";if(n<0.01)ctx="A few wing ribs";else if(n<0.1)ctx="Partial fuselage";else if(n<1)ctx="One airframe's metal";else if(n<5)ctx="Small fleet";else if(n<25)ctx="Regional airline fleet";else if(n<100)ctx="Major airline fleet";else if(n<300)ctx="Substantial fraction of global 777 fleet";else ctx="~28% of all 777s ever delivered (~1,700)";return(<tr key={i} style={{borderBottom:`1px solid ${P.grid}`,opacity:d.p?0.6:1}}>
+                <tbody>{FR.map((d,i)=>{const n=to7g(d.gwh);let ctx="";if(n<0.01)ctx="A few wing ribs";else if(n<0.1)ctx="Partial fuselage";else if(n<1)ctx="One airframe's metal";else if(n<5)ctx="Small fleet";else if(n<25)ctx="Regional airline fleet";else if(n<100)ctx="Major airline fleet";else if(n<200)ctx="Substantial fraction of global fleet";else ctx="~13% of all 777s ever delivered (~1,700)";return(<tr key={i} style={{borderBottom:`1px solid ${P.grid}`,opacity:d.p?0.6:1}}>
                   <td style={{padding:"4px 10px",color:"#ccd",fontSize:10}}>{d.l}</td>
                   <td style={{padding:"4px 10px",color:dCol(d),fontWeight:500}}>{d.m}{d.p&&" ⌁"}</td>
                   <td style={{padding:"4px 10px",color:"#fff",fontWeight:500}}>{fC(d.c)}</td>
@@ -698,8 +703,8 @@ function App(){
                 <span style={{fontSize:20,fontWeight:700,color:P.xai,fontFamily:hf}}>$500M</span>
               </div>
               <div style={{fontSize:10,color:P.dim,marginTop:10,lineHeight:1.6}}>
-                From <span style={{color:P.steel}}>0.4 Boeing 777s</span> to <span style={{color:P.steel}}>65 Boeing 777s</span> of metal smelting energy.
-                By 2027 projected: <span style={{color:P.rose}}>$2B</span> — <span style={{color:P.steel}}>484 airframes</span>, roughly 28% of all 777s ever delivered.
+                From <span style={{color:P.steel}}>0.4 Boeing 777s</span> to <span style={{color:P.steel}}>42 Boeing 777s</span> of metal smelting energy.
+                By 2027 projected: <span style={{color:P.rose}}>$2B</span> — <span style={{color:P.steel}}>226 airframes</span>, roughly 13% of all 777s ever delivered.
               </div>
             </div>
 
@@ -751,7 +756,7 @@ function App(){
             <div style={{fontSize:11.5,color:"#bbc",lineHeight:1.8}}>
               The economics of AI are splitting into two distinct regimes. <span style={{color:P.cyan}}>Using</span> frontier intelligence is approaching near-zero marginal cost — a single query that once cost more than heating a bowl of soup now costs less than firing a single neuron. Meanwhile, <span style={{color:P.red}}>creating</span> that intelligence demands industrial-scale energy commitments that rival smelting the metal for entire airline fleets.
               <br/><br/>
-              This divergence has structural implications: inference commoditizes rapidly (enabling ubiquitous deployment), while training concentrates into fewer organizations that can marshal the capital. The <span style={{color:P.green}}>efficient outliers</span> like DeepSeek demonstrate that algorithmic innovation can partially counteract this concentration — training a GPT-4-class model for $5.6M (1.2 Boeing 777s of energy) vs. $78M (16 Boeing 777s) — but the frontier itself keeps moving upward.
+              This divergence has structural implications: inference commoditizes rapidly (enabling ubiquitous deployment), while training concentrates into fewer organizations that can marshal the capital. The <span style={{color:P.green}}>efficient outliers</span> like DeepSeek demonstrate that algorithmic innovation can partially counteract this concentration — training a GPT-4-class model for $5.6M (1.0 Boeing 777s of energy) vs. $78M (16 Boeing 777s) — but the frontier itself keeps moving upward.
             </div>
           </div>
         </div>)}
@@ -766,9 +771,10 @@ function App(){
           Sources: OpenAI pricing, Epoch AI, a16z LLMflation, DeepSeek announcements, NVIDIA roadmaps.<br/>
           <strong style={{color:"#bbc"}}>Training:</strong> 777-300ER: OEW ~168t → 70% Al, 7% Ti, 11% steel = 148.7t metal. Smelting: Al=15, Ti=100, Steel=8 kWh/kg → 3,100 MWh = $465K @ $0.15/kWh.
           Boeing 777 equivalents use actual training energy (GWh), not cost÷electricity rate. Electricity is only ~10-15% of total training cost (rest: GPU amortization, overhead, cloud margin).
-          Energy sources: Grok 4 = 310 GWh (Epoch AI, 246M H100-hours, Sep 2025). GPT-4 ≈ 50 GWh (25K A100 × 100d, widely cited). DeepSeek V3 ≈ 3.6 GWh (2.8M H800-hrs).
-          Others estimated from GPU-hours × TDP × 0.75 utilization × 2.03 non-GPU overhead × 1.2 PUE. HW FLOP/watt improves ~1.28×/yr (Epoch AI).
-          Projections: ~2.5×/yr net energy growth (4.4× compute growth offset by HW + algorithmic efficiency gains).<br/>
+          Energy sources: Grok 4 = 310 GWh (Epoch AI, 246M H100-hours × 1.26 kWh/hr full-system, Sep 2025). GPT-4 ≈ 50 GWh (25K A100 × 100d, widely cited). DeepSeek V3 ≈ 3.1 GWh (2.8M H800-hrs × 1.10 kWh).
+          Grok 3 ≈ 126 GWh (100M H100-hrs × 1.26). Others estimated from GPU-hours × system power × PUE.
+          Energy grows SLOWER than cost because energy/FLOP improves ~1.5-2×/generation (HW efficiency + FP8/FP4) while cost/FLOP drops only ~1.3×/gen (GPU pricing, supply constraints, non-compute overhead).
+          Projections: B200 ~2× energy-efficiency over H100; Rubin ~1.5× over B200.<br/>
           <strong style={{color:"#bbc"}}>Fine-tuning:</strong> API costs from OpenAI/Mistral published pricing. Self-hosted estimates assume 1M training tokens × 3 epochs on LoRA/QLoRA with Unsloth on rented cloud GPU.
           GPU rates: Lambda Labs / RunPod spot pricing. Open-weight models: Llama 2/3/4, Mistral 7B.
         </div>
