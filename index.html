@@ -114,6 +114,108 @@ const ref7=[1,10,100,1000].map(n=>({n,lc:Math.log10(n*B7C)}));
 const dCol=d=>{if(d.tag==="eff"||d.t==="eff")return P.green;if(d.tag==="xai"||d.t==="xai")return P.xai;if(d.tag==="meta"||d.t==="meta")return P.meta;return P.red;};
 
 // ═══════════════════════════════════════════════════════
+// SECTION 3 — FINE-TUNING DATA
+// ═══════════════════════════════════════════════════════
+const FT_TOKENS=3e6; // 1M training tokens × 3 epochs
+
+const ftApiRaw=[
+  {l:"Mar 2023",m:"GPT-3.5 Turbo FT",ppm:8.00,pr:false,n:"First OpenAI FT offering"},
+  {l:"Oct 2023",m:"GPT-3.5 Turbo FT v2",ppm:8.00,pr:false,n:"OpenAI stabilized pricing"},
+  {l:"Mar 2024",m:"Mistral Small FT",ppm:4.00,pr:false,n:"Mistral La Plateforme launch"},
+  {l:"Aug 2024",m:"GPT-4o mini FT",ppm:3.00,pr:false,n:"OpenAI launched GPT-4o mini FT"},
+  {l:"Jan 2025",m:"DeepSeek V3 (self-host)",ppm:0.50,pr:false,n:"Open-weight, H800 self-hosted est."},
+  {l:"Jun 2025",m:"GPT-4.1 mini FT",ppm:1.50,pr:false,n:"Continued API price compression"},
+  {l:"Oct 2025",m:"Llama 4 LoRA (Unsloth)",ppm:0.10,pr:false,n:"Open-weight + LoRA + Unsloth on H100"},
+  {l:"2026",m:"Next-gen API FT",ppm:0.80,pr:true,n:"Projected: continued halving"},
+  {l:"2027",m:"Rubin-era FT",ppm:0.20,pr:true,n:"Projected: Vera Rubin HW + competition"},
+];
+
+const ftLoraRaw=[
+  {l:"Jun 2023",m:"Llama 2 7B LoRA (A100)",gpu:"A100",gph:3.50,hrs:2,pr:false,n:"Early LoRA on A100 cloud"},
+  {l:"Dec 2023",m:"Mistral 7B QLoRA (A100)",gpu:"A100",gph:3.50,hrs:1,pr:false,n:"QLoRA quantized, faster"},
+  {l:"Jun 2024",m:"Llama 3 8B LoRA (H100)",gpu:"H100",gph:3.00,hrs:0.5,pr:false,n:"H100 availability + better tooling"},
+  {l:"Dec 2024",m:"Llama 3.1 8B (Unsloth)",gpu:"H100",gph:2.50,hrs:0.3,pr:false,n:"Unsloth 2\u00D7 speedup"},
+  {l:"Jun 2025",m:"Llama 4 8B (Unsloth)",gpu:"H100",gph:2.00,hrs:0.15,pr:false,n:"MoE + Unsloth + H100 price drops"},
+  {l:"Dec 2025",m:"8B LoRA (B200)",gpu:"B200",gph:1.50,hrs:0.08,pr:false,n:"Blackwell B200 + optimized kernels"},
+  {l:"2026",m:"Next-gen 8B (Blackwell)",gpu:"B200",gph:1.00,hrs:0.05,pr:true,n:"Projected"},
+  {l:"2027",m:"Next-gen 8B (Rubin)",gpu:"Rubin",gph:0.50,hrs:0.02,pr:true,n:"Projected"},
+];
+
+const ftApiData=ftApiRaw.map(function(d,i,a){
+  var cost=d.ppm*(FT_TOKENS/1e6);
+  var lc=Math.log10(cost);
+  var la=!d.pr&&a[i+1]&&a[i+1].pr;
+  return Object.assign({},d,{cost:cost,lc:lc,label:d.l,model:d.m,note:d.n,proj:d.pr,
+    aLog:!d.pr?lc:null,pLog:d.pr||la?lc:null,series:"api"});
+});
+
+const ftLoraData=ftLoraRaw.map(function(d,i,a){
+  var cost=d.gph*d.hrs;
+  var lc=Math.log10(cost);
+  var la=!d.pr&&a[i+1]&&a[i+1].pr;
+  return Object.assign({},d,{cost:cost,lc:lc,label:d.l,model:d.m,note:d.n,proj:d.pr,
+    aLog:!d.pr?lc:null,pLog:d.pr||la?lc:null,series:"lora"});
+});
+
+// Merge both series into a single chart dataset by unifying labels
+var ftAllLabels=[];
+ftApiData.forEach(function(d){if(ftAllLabels.indexOf(d.label)===-1)ftAllLabels.push(d.label);});
+ftLoraData.forEach(function(d){if(ftAllLabels.indexOf(d.label)===-1)ftAllLabels.push(d.label);});
+// Sort chronologically by extracting a rough date
+function ftSortKey(lb){
+  var m={Jan:"01",Feb:"02",Mar:"03",Apr:"04",May:"05",Jun:"06",Jul:"07",Aug:"08",Sep:"09",Oct:"10",Nov:"11",Dec:"12"};
+  var p=lb.match(/^([A-Z][a-z]+)\s+(\d{4})$/);
+  if(p)return p[2]+"-"+m[p[1]];
+  var y=lb.match(/^(\d{4})/);
+  if(y)return y[1]+"-13";
+  return lb;
+}
+ftAllLabels.sort(function(a,b){return ftSortKey(a)<ftSortKey(b)?-1:1;});
+
+const ftChartData=ftAllLabels.map(function(label){
+  var api=ftApiData.find(function(d){return d.label===label;});
+  var lora=ftLoraData.find(function(d){return d.label===label;});
+  var apiI=ftApiData.findIndex(function(d){return d.label===label;});
+  var loraI=ftLoraData.findIndex(function(d){return d.label===label;});
+  var laA=api&&!api.proj&&ftApiData[apiI+1]&&ftApiData[apiI+1].proj;
+  var laL=lora&&!lora.proj&&ftLoraData[loraI+1]&&ftLoraData[loraI+1].proj;
+  return{label:label,
+    apiA:api&&!api.proj?api.lc:null, apiP:api&&(api.proj||laA)?api.lc:null,
+    loraA:lora&&!lora.proj?lora.lc:null, loraP:lora&&(lora.proj||laL)?lora.lc:null,
+    apiCost:api?api.cost:null, loraCost:lora?lora.cost:null,
+    apiModel:api?api.model:null, loraModel:lora?lora.model:null,
+    apiNote:api?api.note:null, loraNote:lora?lora.note:null,
+    apiProj:api?api.proj:null, loraProj:lora?lora.proj:null,
+    loraGpu:lora?lora.gpu:null,loraPpm:api?api.ppm:null,
+    loraGph:lora?lora.gph:null,loraHrs:lora?lora.hrs:null,
+    apiPpm:api?api.ppm:null
+  };
+});
+
+const ftLogTicks=[-2,-1,0,1,2];
+const fFTCost=function(v){var c=Math.pow(10,v);if(c>=1)return"$"+c.toFixed(0);if(c>=0.1)return"$"+c.toFixed(1);return"$"+c.toFixed(2);};
+
+const FtTT=function(props){
+  if(!props.active||!props.payload||!props.payload.length)return null;
+  var d=props.payload[0].payload;
+  return React.createElement("div",{style:ttStyle},
+    React.createElement("div",{style:{color:"#fff",fontWeight:600,fontSize:12,marginBottom:6}},d.label),
+    d.apiModel&&React.createElement("div",null,
+      React.createElement("span",{style:{color:P.purple,fontWeight:600}},"API: "),
+      React.createElement("span",{style:{color:"#ccc"}},d.apiModel),
+      React.createElement("div",{style:{fontSize:10,color:"#aab"}},"$"+d.apiPpm+"/M tokens \u2192 ",React.createElement("span",{style:{color:"#fff",fontWeight:600}},"$"+d.apiCost.toFixed(2))," for 3M tokens"),
+      d.apiProj&&React.createElement("span",{style:{color:P.rose,fontSize:9,fontStyle:"italic"}}," (projected)")
+    ),
+    d.loraModel&&React.createElement("div",{style:{marginTop:d.apiModel?6:0}},
+      React.createElement("span",{style:{color:P.green,fontWeight:600}},"LoRA: "),
+      React.createElement("span",{style:{color:"#ccc"}},d.loraModel),
+      React.createElement("div",{style:{fontSize:10,color:"#aab"}},d.loraGpu+" @ $"+d.loraGph+"/hr \u00D7 "+d.loraHrs+"h \u2192 ",React.createElement("span",{style:{color:"#fff",fontWeight:600}},"$"+d.loraCost.toFixed(2))),
+      d.loraProj&&React.createElement("span",{style:{color:P.rose,fontSize:9,fontStyle:"italic"}}," (projected)")
+    )
+  );
+};
+
+// ═══════════════════════════════════════════════════════
 // TOOLTIPS
 // ═══════════════════════════════════════════════════════
 const ttStyle={background:"#0c0c1cee",border:`1px solid ${P.grid}`,borderRadius:8,padding:"11px 15px",fontSize:11,fontFamily:font,lineHeight:1.7,color:"#ccc",maxWidth:310,backdropFilter:"blur(12px)",boxShadow:"0 8px 32px #00000088"};
@@ -167,6 +269,7 @@ function App(){
   const[section,setSection]=useState("inference");
   const[infView,setInfView]=useState("cost");
   const[trainTab,setTrainTab]=useState("frontier");
+  const[tuneTab,setTuneTab]=useState("curves");
 
   // inference y-axis
   const infYKey=infView==="cost"?"aCL":"aML";
@@ -201,6 +304,9 @@ function App(){
           </Pill>
           <Pill active={section==="training"} onClick={()=>setSection("training")} accent={P.red}>
             ✈ Training Cost × 777
+          </Pill>
+          <Pill active={section==="tuning"} onClick={()=>setSection("tuning")} accent={P.purple}>
+            {"\uD83D\uDD27 Fine-Tuning Cost"}
           </Pill>
           <Pill active={section==="summary"} onClick={()=>setSection("summary")} accent={P.gold}>
             📊 Combined Summary
@@ -368,6 +474,139 @@ function App(){
         </div>)}
 
         {/* ═══════════════════════════════════════════ */}
+        {/* FINE-TUNING SECTION                        */}
+        {/* ═══════════════════════════════════════════ */}
+        {section==="tuning"&&(<div>
+          <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:14,flexWrap:"wrap"}}>
+            <h2 style={{fontFamily:hf,fontSize:18,fontWeight:600,color:P.bright,margin:0}}>Fine-Tuning Cost Decline</h2>
+            <div style={{display:"flex",gap:4}}>
+              <Pill active={tuneTab==="curves"} onClick={()=>setTuneTab("curves")} accent={P.purple}>Cost Curves</Pill>
+              <Pill active={tuneTab==="table"} onClick={()=>setTuneTab("table")} accent={P.green}>Comparison Table</Pill>
+              <Pill active={tuneTab==="insight"} onClick={()=>setTuneTab("insight")} accent={P.gold}>Key Insight</Pill>
+            </div>
+          </div>
+          <div style={{fontSize:11,color:P.dim,marginBottom:10}}>
+            Cost to fine-tune on a standard task (1M training tokens {"\u00D7"} 3 epochs = 3M tokens). Log scale.
+          </div>
+
+          {/* COST CURVES */}
+          {tuneTab==="curves"&&(<div>
+            <ChartWrap>
+              <ResponsiveContainer width="100%" height={460}>
+                <ComposedChart data={ftChartData} margin={{top:10,right:30,left:20,bottom:25}}>
+                  <defs>
+                    <linearGradient id="ftAG" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={P.purple} stopOpacity={0.1}/><stop offset="100%" stopColor={P.purple} stopOpacity={0}/></linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke={P.grid}/>
+                  <XAxis dataKey="label" tick={{fill:"#556",fontSize:9,fontFamily:font}} stroke="#222" angle={-35} textAnchor="end" height={60}/>
+                  <YAxis domain={[-2,2]} ticks={ftLogTicks} tickFormatter={fFTCost} tick={{fill:"#556",fontSize:9,fontFamily:font}} stroke="#222" width={60}
+                    label={{value:"Fine-Tuning Cost (USD)",angle:-90,position:"insideLeft",offset:10,style:{fill:"#445",fontSize:10,fontFamily:font}}}/>
+                  <Tooltip content={<FtTT/>}/>
+                  <ReferenceLine y={0} stroke={P.gold+"66"} strokeDasharray="4 4"
+                    label={{value:"\u2248 less than a coffee",position:"right",fill:P.gold,fontSize:9,fontFamily:font}}/>
+                  <Area dataKey="apiA" stroke="none" fill="url(#ftAG)" connectNulls/>
+                  <Line dataKey="apiA" stroke={P.purple} strokeWidth={2.5} dot={{r:4.5,fill:P.purple,stroke:P.panel,strokeWidth:2}} connectNulls/>
+                  <Line dataKey="apiP" stroke={P.purple} strokeWidth={2} strokeDasharray="8 4" dot={{r:4,fill:P.purple,stroke:P.panel,strokeWidth:2}} connectNulls/>
+                  <Line dataKey="loraA" stroke={P.green} strokeWidth={2.5} dot={{r:4.5,fill:P.green,stroke:P.panel,strokeWidth:2}} connectNulls/>
+                  <Line dataKey="loraP" stroke={P.green} strokeWidth={2} strokeDasharray="8 4" dot={{r:4,fill:P.green,stroke:P.panel,strokeWidth:2}} connectNulls/>
+                </ComposedChart>
+              </ResponsiveContainer>
+            </ChartWrap>
+            <Legend items={[
+              <span><span style={{color:P.purple}}>{"\u2501\u2501"}</span> API fine-tuning <span style={{color:P.purple}}>{"\u254C\u254C"}</span> proj.</span>,
+              <span><span style={{color:P.green}}>{"\u2501\u2501"}</span> Self-hosted LoRA <span style={{color:P.green}}>{"\u254C\u254C"}</span> proj.</span>,
+              <span><span style={{color:P.gold}}>{"\u2504\u2504"}</span> $1 reference</span>,
+            ]}/>
+          </div>)}
+
+          {/* COMPARISON TABLE */}
+          {tuneTab==="table"&&(<div>
+            <div style={{fontSize:12,fontWeight:600,color:P.purple,fontFamily:hf,marginBottom:10}}>Series A {"\u2014"} API / Hosted Fine-Tuning</div>
+            <div style={{overflowX:"auto",marginBottom:20}}>
+              <table style={{width:"100%",borderCollapse:"collapse",fontSize:10.5,lineHeight:1.5}}>
+                <thead><tr style={{borderBottom:"1px solid #222"}}>{["Date","Model","$/1M tokens","Cost (3M tok)","Notes"].map(function(h,i){return(<th key={i} style={{textAlign:"left",padding:"6px 10px",color:"#445",fontWeight:500}}>{h}</th>);})}</tr></thead>
+                <tbody>{ftApiData.map(function(d,i){return(<tr key={i} style={{borderBottom:"1px solid "+P.grid,opacity:d.proj?0.6:1}}>
+                  <td style={{padding:"5px 10px",color:"#889"}}>{d.label}</td>
+                  <td style={{padding:"5px 10px",color:d.proj?P.rose:P.purple,fontWeight:500}}>{d.model}{d.proj&&" \u2301"}</td>
+                  <td style={{padding:"5px 10px",color:"#fff",fontWeight:500}}>{"$"+d.ppm.toFixed(2)}</td>
+                  <td style={{padding:"5px 10px",color:P.purple,fontWeight:600}}>{"$"+d.cost.toFixed(2)}</td>
+                  <td style={{padding:"5px 10px",color:"#334",fontSize:10}}>{d.note}</td>
+                </tr>);})}</tbody>
+              </table>
+            </div>
+            <div style={{fontSize:12,fontWeight:600,color:P.green,fontFamily:hf,marginBottom:10}}>Series B {"\u2014"} Self-Hosted LoRA (7B{"\u2013"}13B open-weight)</div>
+            <div style={{overflowX:"auto"}}>
+              <table style={{width:"100%",borderCollapse:"collapse",fontSize:10.5,lineHeight:1.5}}>
+                <thead><tr style={{borderBottom:"1px solid #222"}}>{["Date","Model","GPU","$/hr","Hours","Total Cost","Notes"].map(function(h,i){return(<th key={i} style={{textAlign:"left",padding:"6px 10px",color:"#445",fontWeight:500}}>{h}</th>);})}</tr></thead>
+                <tbody>{ftLoraData.map(function(d,i){return(<tr key={i} style={{borderBottom:"1px solid "+P.grid,opacity:d.proj?0.6:1}}>
+                  <td style={{padding:"5px 10px",color:"#889"}}>{d.label}</td>
+                  <td style={{padding:"5px 10px",color:d.proj?P.rose:P.green,fontWeight:500}}>{d.model}{d.proj&&" \u2301"}</td>
+                  <td style={{padding:"5px 10px",color:P.steel}}>{d.gpu}</td>
+                  <td style={{padding:"5px 10px",color:"#fff"}}>{"$"+d.gph.toFixed(2)}</td>
+                  <td style={{padding:"5px 10px",color:"#aab"}}>{d.hrs+"h"}</td>
+                  <td style={{padding:"5px 10px",color:P.green,fontWeight:600}}>{"$"+d.cost.toFixed(2)}</td>
+                  <td style={{padding:"5px 10px",color:"#334",fontSize:10}}>{d.note}</td>
+                </tr>);})}</tbody>
+              </table>
+            </div>
+          </div>)}
+
+          {/* KEY INSIGHT */}
+          {tuneTab==="insight"&&(<div>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(200px, 1fr))",gap:12,marginBottom:20}}>
+              <div style={{background:P.card,border:"1px solid "+P.purple+"22",borderRadius:12,padding:"20px"}}>
+                <div style={{fontSize:9,letterSpacing:2,color:P.dim,textTransform:"uppercase",marginBottom:8}}>API Fine-Tuning</div>
+                <div style={{display:"flex",alignItems:"baseline",gap:8}}>
+                  <span style={{fontSize:12,color:"#889"}}>Mar 2023</span>
+                  <span style={{fontSize:20,fontWeight:700,color:P.purple,fontFamily:hf}}>$24</span>
+                </div>
+                <div style={{display:"flex",alignItems:"center",gap:6,margin:"6px 0"}}>
+                  <div style={{flex:1,height:1,background:"linear-gradient(to right, "+P.purple+", "+P.green+")"}}/>
+                  <span style={{fontSize:10,color:P.green}}>{"\u223C"}80{"\u00D7"} cheaper</span>
+                  <div style={{flex:1,height:1,background:"linear-gradient(to right, "+P.green+", "+P.purple+")"}}/>
+                </div>
+                <div style={{display:"flex",alignItems:"baseline",gap:8}}>
+                  <span style={{fontSize:12,color:"#889"}}>Oct 2025</span>
+                  <span style={{fontSize:20,fontWeight:700,color:P.green,fontFamily:hf}}>$0.30</span>
+                </div>
+              </div>
+              <div style={{background:P.card,border:"1px solid "+P.green+"22",borderRadius:12,padding:"20px"}}>
+                <div style={{fontSize:9,letterSpacing:2,color:P.dim,textTransform:"uppercase",marginBottom:8}}>Self-Hosted LoRA</div>
+                <div style={{display:"flex",alignItems:"baseline",gap:8}}>
+                  <span style={{fontSize:12,color:"#889"}}>Jun 2023</span>
+                  <span style={{fontSize:20,fontWeight:700,color:P.green,fontFamily:hf}}>$7.00</span>
+                </div>
+                <div style={{display:"flex",alignItems:"center",gap:6,margin:"6px 0"}}>
+                  <div style={{flex:1,height:1,background:"linear-gradient(to right, "+P.green+", "+P.cyan+")"}}/>
+                  <span style={{fontSize:10,color:P.cyan}}>{"\u223C"}700{"\u00D7"} cheaper</span>
+                  <div style={{flex:1,height:1,background:"linear-gradient(to right, "+P.cyan+", "+P.green+")"}}/>
+                </div>
+                <div style={{display:"flex",alignItems:"baseline",gap:8}}>
+                  <span style={{fontSize:12,color:"#889"}}>2027 (est.)</span>
+                  <span style={{fontSize:20,fontWeight:700,color:P.cyan,fontFamily:hf}}>$0.01</span>
+                </div>
+              </div>
+            </div>
+            <div style={{background:"linear-gradient(135deg, "+P.card+" 0%, #161630 100%)",border:"1px solid #1a1a40",borderRadius:12,padding:"24px 28px"}}>
+              <div style={{fontSize:14,fontWeight:600,color:P.bright,fontFamily:hf,marginBottom:10}}>The Convergence</div>
+              <div style={{fontSize:11.5,color:"#99a",lineHeight:1.8}}>
+                {"API fine-tuning and self-hosted LoRA costs are converging toward near-zero. In 2023, fine-tuning a model via API cost $24 \u2014 today the same capability costs $0.30 with open-weight LoRA on rented GPU."}
+                <br/><br/>
+                {"Fine-tuning a model now costs less than a single frontier inference query did in 2022 ($0.06). This means "}
+                <span style={{color:P.purple}}>{"personalization is essentially free"}</span>
+                {". Any developer can adapt a frontier-class model to their domain for the price of a gumball."}
+                <br/><br/>
+                {"The implication: the moat is not in adaptation or deployment \u2014 it\u2019s in "}
+                <span style={{color:P.red}}>{"base model training"}</span>
+                {", where costs continue to escalate into the hundreds of millions. The "}
+                <span style={{color:P.green}}>{"efficient outliers"}</span>
+                {" (Unsloth, QLoRA, DeepSeek) have compressed fine-tuning from a capital expense into a rounding error."}
+              </div>
+            </div>
+          </div>)}
+        </div>)}
+
+        {/* ═══════════════════════════════════════════ */}
         {/* COMBINED SUMMARY                           */}
         {/* ═══════════════════════════════════════════ */}
         {section==="summary"&&(<div>
@@ -436,6 +675,27 @@ function App(){
                 The gap between training and inference cost is widening by ~3 orders of magnitude every 2 years.
               </div>
             </div>
+
+            <div style={{background:P.card,border:`1px solid ${P.purple}22`,borderRadius:12,padding:"20px"}}>
+              <div style={{fontSize:9,letterSpacing:2,color:P.dim,textTransform:"uppercase",marginBottom:8}}>Fine-Tuning Cost</div>
+              <div style={{display:"flex",alignItems:"baseline",gap:8}}>
+                <span style={{fontSize:12,color:"#889"}}>Mar 2023</span>
+                <span style={{fontSize:20,fontWeight:700,color:P.purple,fontFamily:hf}}>$24</span>
+              </div>
+              <div style={{display:"flex",alignItems:"center",gap:6,margin:"6px 0"}}>
+                <div style={{flex:1,height:1,background:`linear-gradient(to right, ${P.purple}, ${P.green})`}}/>
+                <span style={{fontSize:10,color:P.green}}>{"\u223C"}80{"\u00D7"} cheaper</span>
+                <div style={{flex:1,height:1,background:`linear-gradient(to right, ${P.green}, ${P.purple})`}}/>
+              </div>
+              <div style={{display:"flex",alignItems:"baseline",gap:8}}>
+                <span style={{fontSize:12,color:"#889"}}>Oct 2025</span>
+                <span style={{fontSize:20,fontWeight:700,color:P.green,fontFamily:hf}}>$0.30</span>
+              </div>
+              <div style={{fontSize:10,color:P.dim,marginTop:10,lineHeight:1.6}}>
+                Model personalization is essentially free. Fine-tuning now costs less than a single inference query did in 2022.
+                By 2027: <span style={{color:P.rose}}>$0.01</span> via self-hosted LoRA.
+              </div>
+            </div>
           </div>
 
           {/* Key insight */}
@@ -460,7 +720,9 @@ function App(){
           <strong style={{color:"#556"}}>Training:</strong> 777-300ER: OEW ~168t → 70% Al, 7% Ti, 11% steel = 148.7t metal. Smelting: Al=15, Ti=100, Steel=8 kWh/kg → 3,100 MWh = $465K @ $0.15/kWh.
           Grok 4: $490M median (Epoch AI, Sep 2025, 246M H100-hours). GPT-4.5: ~$400M (Epoch). GPT-5: ~$500M/run (industry reports).
           Grok 3: ~$300M (100K H100s × 122d). DeepSeek V3: $5.6M (reported); R1: ~$10M est.
-          All costs compute-only (excl. staff, experiments, data). Projections: Epoch AI 2.4×/yr growth.
+          All costs compute-only (excl. staff, experiments, data). Projections: Epoch AI 2.4×/yr growth.<br/>
+          <strong style={{color:"#556"}}>Fine-tuning:</strong> API costs from OpenAI/Mistral published pricing. Self-hosted estimates assume 1M training tokens × 3 epochs on LoRA/QLoRA with Unsloth on rented cloud GPU.
+          GPU rates: Lambda Labs / RunPod spot pricing. Open-weight models: Llama 2/3/4, Mistral 7B.
         </div>
       </div>
     </div>
