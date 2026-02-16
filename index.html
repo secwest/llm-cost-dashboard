@@ -287,6 +287,7 @@ function App(){
   const[section,setSection]=useState("inference");
   const[infView,setInfView]=useState("cost");
   const[trainTab,setTrainTab]=useState("frontier");
+  const[frontierView,setFrontierView]=useState("cost");
   const[tuneTab,setTuneTab]=useState("curves");
 
   // inference y-axis
@@ -405,32 +406,62 @@ function App(){
 
           {/* FRONTIER */}
           {trainTab==="frontier"&&(<div>
+            <div style={{display:"flex",gap:4,marginBottom:12}}>
+              <Pill active={frontierView==="cost"} onClick={()=>setFrontierView("cost")} accent={P.red}>💰 Cost (USD)</Pill>
+              <Pill active={frontierView==="energy"} onClick={()=>setFrontierView("energy")} accent={P.gold}>⚡ Energy (GWh)</Pill>
+            </div>
+
+            {/* COST CHART */}
+            {frontierView==="cost"&&(<div>
             <ChartWrap>
               <ResponsiveContainer width="100%" height={500}>
-                <ComposedChart data={frontier} margin={{top:10,right:80,left:25,bottom:30}}>
+                <ComposedChart data={frontier} margin={{top:10,right:20,left:25,bottom:30}}>
                   <defs><linearGradient id="fa" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={P.red} stopOpacity={0.1}/><stop offset="100%" stopColor={P.red} stopOpacity={0}/></linearGradient></defs>
                   <CartesianGrid strokeDasharray="3 3" stroke={P.grid}/>
                   <XAxis dataKey="label" tick={{fill:"#99a",fontSize:9,fontFamily:font}} stroke="#222" angle={-45} textAnchor="end" height={65}/>
                   <YAxis yAxisId="c" domain={[2,10]} ticks={logT} tickFormatter={fLCT} tick={{fill:"#99a",fontSize:9,fontFamily:font}} stroke="#222" width={65}
                     label={{value:"Training Cost (USD)",angle:-90,position:"insideLeft",offset:5,style:{fill:"#889",fontSize:10,fontFamily:font}}}/>
-                  <YAxis yAxisId="e" orientation="right" domain={[-4,4]} ticks={eLogT} tickFormatter={fELT} tick={{fill:P.gold,fontSize:9,fontFamily:font}} stroke="#222" width={72}
-                    label={{value:"Training Energy",angle:90,position:"insideRight",offset:5,style:{fill:P.gold,fontSize:10,fontFamily:font}}}/>
                   <Tooltip content={<TrainTT/>}/>
                   <Area yAxisId="c" dataKey="actualLog" stroke="none" fill="url(#fa)" connectNulls/>
                   <Line yAxisId="c" dataKey="actualLog" stroke={P.red} strokeWidth={2.5} dot={props=>{const{cx,cy,payload}=props;if(cx==null||cy==null)return null;return(<circle key={payload.label} cx={cx} cy={cy} r={payload.tag==="eff"?6:5} fill={dCol(payload)} stroke={P.panel} strokeWidth={2}/>);}} connectNulls/>
                   <Line yAxisId="c" dataKey="projLog" stroke={P.red} strokeWidth={2} strokeDasharray="8 4" dot={{r:4,fill:P.red,stroke:P.panel,strokeWidth:2}} connectNulls/>
-                  <Line yAxisId="e" dataKey="actualGWh" stroke={P.gold} strokeWidth={2} dot={{r:3.5,fill:P.gold,stroke:P.panel,strokeWidth:2}} connectNulls/>
-                  <Line yAxisId="e" dataKey="projGWh" stroke={P.gold} strokeWidth={1.5} strokeDasharray="6 4" dot={{r:3,fill:P.gold,stroke:P.panel,strokeWidth:2}} connectNulls/>
                 </ComposedChart>
               </ResponsiveContainer>
             </ChartWrap>
             <Legend items={[
-              <span><span style={{color:P.red}}>━━</span> Cost <span style={{color:P.red}}>╌╌</span> proj.</span>,
-              <span><span style={{color:P.gold}}>━━</span> Energy (GWh) <span style={{color:P.gold}}>╌╌</span> proj.</span>,
+              <span><span style={{color:P.red}}>━━</span> Frontier cost <span style={{color:P.red}}>╌╌</span> proj.</span>,
               <span><span style={{color:P.green}}>●</span> Efficient (DS V3/R1, GPT-4o)</span>,
               <span><span style={{color:P.xai}}>●</span> xAI (Grok 3/4)</span>,
               <span><span style={{color:P.meta}}>●</span> Meta (Llama)</span>,
             ]}/>
+            </div>)}
+
+            {/* ENERGY CHART */}
+            {frontierView==="energy"&&(<div>
+            <ChartWrap>
+              <ResponsiveContainer width="100%" height={500}>
+                <ComposedChart data={frontier} margin={{top:10,right:20,left:25,bottom:30}}>
+                  <defs><linearGradient id="fe" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={P.gold} stopOpacity={0.12}/><stop offset="100%" stopColor={P.gold} stopOpacity={0}/></linearGradient></defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke={P.grid}/>
+                  <XAxis dataKey="label" tick={{fill:"#99a",fontSize:9,fontFamily:font}} stroke="#222" angle={-45} textAnchor="end" height={65}/>
+                  <YAxis yAxisId="e" domain={[-4,4]} ticks={eLogT} tickFormatter={fELT} tick={{fill:"#99a",fontSize:9,fontFamily:font}} stroke="#222" width={72}
+                    label={{value:"Training Energy",angle:-90,position:"insideLeft",offset:5,style:{fill:P.gold,fontSize:10,fontFamily:font}}}/>
+                  <Tooltip content={<TrainTT/>}/>
+                  {[1,10,100].map(n=>{const y=Math.log10(n*B7M/1000);return y>=-4&&y<=4?<ReferenceLine key={n} yAxisId="e" y={y} stroke={P.steel} strokeOpacity={0.25} strokeDasharray="6 4" label={{value:`${n} 777${n>1?"s":""}`,position:"insideTopLeft",fill:P.steel,fontSize:9,fontFamily:font}}/>:null;})}
+                  <Area yAxisId="e" dataKey="actualGWh" stroke="none" fill="url(#fe)" connectNulls/>
+                  <Line yAxisId="e" dataKey="actualGWh" stroke={P.gold} strokeWidth={2.5} dot={props=>{const{cx,cy,payload}=props;if(cx==null||cy==null)return null;return(<circle key={payload.label} cx={cx} cy={cy} r={payload.tag==="eff"?6:5} fill={dCol(payload)} stroke={P.panel} strokeWidth={2}/>);}} connectNulls/>
+                  <Line yAxisId="e" dataKey="projGWh" stroke={P.gold} strokeWidth={2} strokeDasharray="8 4" dot={{r:4,fill:P.gold,stroke:P.panel,strokeWidth:2}} connectNulls/>
+                </ComposedChart>
+              </ResponsiveContainer>
+            </ChartWrap>
+            <Legend items={[
+              <span><span style={{color:P.gold}}>━━</span> Training energy <span style={{color:P.gold}}>╌╌</span> proj.</span>,
+              <span><span style={{color:P.green}}>●</span> Efficient (DS V3/R1, GPT-4o)</span>,
+              <span><span style={{color:P.xai}}>●</span> xAI (Grok 3/4)</span>,
+              <span><span style={{color:P.meta}}>●</span> Meta (Llama)</span>,
+              <span><span style={{color:P.steel}}>┄┄</span> 777 equiv. lines</span>,
+            ]}/>
+            </div>)}
           </div>)}
 
           {/* REPLICATION */}
