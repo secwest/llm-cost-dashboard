@@ -35,7 +35,7 @@ const font="'JetBrains Mono','SF Mono',monospace";
 const hf="'DM Sans',sans-serif";
 const P={
   bg:"#08080f",panel:"#0e0e1a",card:"#111122",grid:"#161630",
-  dim:"#445",text:"#bbc",bright:"#eee",
+  dim:"#889",text:"#bbc",bright:"#eee",
   red:"#ff4466",green:"#22dd88",gold:"#ffaa22",cyan:"#44ccff",
   blue:"#4488ff",purple:"#aa66ff",steel:"#8899aa",
   xai:"#ff8844",meta:"#0088ff",rose:"#e94560",amber:"#ffd700",
@@ -116,16 +116,20 @@ const FR=[
 const RG3=[{l:"2020",c:4600000,gwh:1.3,p:false},{l:"2022",c:450000,gwh:0.09,p:false},{l:"2023",c:200000,gwh:0.04,p:false},{l:"2024 Q1",c:100000,gwh:0.02,p:false},{l:"2024 Q4",c:50000,gwh:0.01,p:false},{l:"2025",c:25000,gwh:0.005,p:false},{l:"2026",c:10000,gwh:0.002,p:true},{l:"2027",c:3000,gwh:0.0006,p:true}];
 const RG4=[{l:"2023 Q1",c:78000000,gwh:50,p:false},{l:"2023 Q4",c:20000000,gwh:4,p:false},{l:"2024 Q4",c:5576000,gwh:3.6,p:false},{l:"2025 Q1",c:3000000,gwh:0.6,p:false},{l:"2026",c:1000000,gwh:0.2,p:true},{l:"2027",c:300000,gwh:0.06,p:true}];
 
-const frontier=FR.map((d,i,a)=>{const lc=Math.log10(d.c);const la=!d.p&&a[i+1]?.p;return{...d,n777:to7g(d.gwh),logCost:lc,label:d.l,model:d.m,cost:d.c,gwh:d.gwh,proj:d.p,tag:d.t,actualLog:!d.p?lc:null,projLog:d.p||la?lc:null};});
+const frontier=FR.map((d,i,a)=>{const lc=Math.log10(d.c);const lg=d.gwh>0?Math.log10(d.gwh):null;const la=!d.p&&a[i+1]?.p;return{...d,n777:to7g(d.gwh),logCost:lc,logGWh:lg,label:d.l,model:d.m,cost:d.c,gwh:d.gwh,proj:d.p,tag:d.t,actualLog:!d.p?lc:null,projLog:d.p||la?lc:null,actualGWh:!d.p&&lg!=null?lg:null,projGWh:(d.p||la)&&lg!=null?lg:null};});
 
 const allRL=[...new Set([...RG3.map(d=>d.l),...RG4.map(d=>d.l)])].sort();
-const repData=allRL.map(label=>{const g3=RG3.find(d=>d.l===label);const g4=RG4.find(d=>d.l===label);const g3i=RG3.findIndex(d=>d.l===label);const g4i=RG4.findIndex(d=>d.l===label);const la3=g3&&!g3.p&&RG3[g3i+1]?.p;const la4=g4&&!g4.p&&RG4[g4i+1]?.p;return{label,aG3:g3&&!g3.p?Math.log10(g3.c):null,pG3:g3&&(g3.p||la3)?Math.log10(g3.c):null,aG4:g4&&!g4.p?Math.log10(g4.c):null,pG4:g4&&(g4.p||la4)?Math.log10(g4.c):null,g3c:g3?.c,g4c:g4?.c,g3g:g3?.gwh,g4g:g4?.gwh,g3p:g3?.p,g4p:g4?.p};});
+const repData=allRL.map(label=>{const g3=RG3.find(d=>d.l===label);const g4=RG4.find(d=>d.l===label);const g3i=RG3.findIndex(d=>d.l===label);const g4i=RG4.findIndex(d=>d.l===label);const la3=g3&&!g3.p&&RG3[g3i+1]?.p;const la4=g4&&!g4.p&&RG4[g4i+1]?.p;const g3lg=g3&&g3.gwh>0?Math.log10(g3.gwh):null;const g4lg=g4&&g4.gwh>0?Math.log10(g4.gwh):null;return{label,aG3:g3&&!g3.p?Math.log10(g3.c):null,pG3:g3&&(g3.p||la3)?Math.log10(g3.c):null,aG4:g4&&!g4.p?Math.log10(g4.c):null,pG4:g4&&(g4.p||la4)?Math.log10(g4.c):null,aG3e:g3&&!g3.p?g3lg:null,pG3e:g3&&(g3.p||la3)?g3lg:null,aG4e:g4&&!g4.p?g4lg:null,pG4e:g4&&(g4.p||la4)?g4lg:null,g3c:g3?.c,g4c:g4?.c,g3g:g3?.gwh,g4g:g4?.gwh,g3p:g3?.p,g4p:g4?.p};});
 
 const logT=[2,3,4,5,6,7,8,9,10];
 const fLCT=v=>({2:"$100",3:"$1K",4:"$10K",5:"$100K",6:"$1M",7:"$10M",8:"$100M",9:"$1B",10:"$10B"}[v]||"");
 const fL7T=v=>{const c=Math.pow(10,v);const n=to7(c);if(n<0.01)return`${(n*1000).toFixed(1)}e-3`;if(n<1)return n.toFixed(2);if(n<10)return n.toFixed(1);if(n<1000)return Math.round(n).toLocaleString();return`${(n/1000).toFixed(1)}K`;};
 const ref7=[1,10,100,1000].map(n=>({n,lc:Math.log10(n*B7C)}));
 const dCol=d=>{if(d.tag==="eff"||d.t==="eff")return P.green;if(d.tag==="xai"||d.t==="xai")return P.xai;if(d.tag==="meta"||d.t==="meta")return P.meta;return P.red;};
+// Energy axis (log10 of GWh)
+const eLogT=[-3,-2,-1,0,1,2,3];
+const fELT=v=>({"-3":"1 MWh","-2":"10 MWh","-1":"100 MWh","0":"1 GWh","1":"10 GWh","2":"100 GWh","3":"1 TWh"}[String(v)]||"");
+const eLogTR=[-3,-2,-1,0,1,2]; // narrower range for replication chart
 
 // ═══════════════════════════════════════════════════════
 // SECTION 3 — FINE-TUNING DATA
@@ -217,13 +221,13 @@ const FtTT=function(props){
     d.apiModel&&React.createElement("div",null,
       React.createElement("span",{style:{color:P.purple,fontWeight:600}},"API: "),
       React.createElement("span",{style:{color:"#ccc"}},d.apiModel),
-      React.createElement("div",{style:{fontSize:10,color:"#aab"}},"$"+d.apiPpm+"/M tokens \u2192 ",React.createElement("span",{style:{color:"#fff",fontWeight:600}},"$"+d.apiCost.toFixed(2))," for 3M tokens"),
+      React.createElement("div",{style:{fontSize:10,color:"#ccd"}},"$"+d.apiPpm+"/M tokens \u2192 ",React.createElement("span",{style:{color:"#fff",fontWeight:600}},"$"+d.apiCost.toFixed(2))," for 3M tokens"),
       d.apiProj&&React.createElement("span",{style:{color:P.rose,fontSize:9,fontStyle:"italic"}}," (projected)")
     ),
     d.loraModel&&React.createElement("div",{style:{marginTop:d.apiModel?6:0}},
       React.createElement("span",{style:{color:P.green,fontWeight:600}},"LoRA: "),
       React.createElement("span",{style:{color:"#ccc"}},d.loraModel),
-      React.createElement("div",{style:{fontSize:10,color:"#aab"}},d.loraGpu+" @ $"+d.loraGph+"/hr \u00D7 "+d.loraHrs+"h \u2192 ",React.createElement("span",{style:{color:"#fff",fontWeight:600}},"$"+d.loraCost.toFixed(2))),
+      React.createElement("div",{style:{fontSize:10,color:"#ccd"}},d.loraGpu+" @ $"+d.loraGph+"/hr \u00D7 "+d.loraHrs+"h \u2192 ",React.createElement("span",{style:{color:"#fff",fontWeight:600}},"$"+d.loraCost.toFixed(2))),
       d.loraProj&&React.createElement("span",{style:{color:P.rose,fontSize:9,fontStyle:"italic"}}," (projected)")
     )
   );
@@ -241,7 +245,7 @@ const InfTT=({active,payload})=>{
     <div>Cost/query: <span style={{color:P.cyan}}>{fCost(d.qc)}</span></div>
     <div>Microwave equiv.: <span style={{color:P.amber}}>{fMW(d.mws)}</span></div>
     <div style={{fontSize:10,color:P.dim}}>In: ${d.i}/M · Out: ${d.o}/M</div>
-    <div style={{color:"#667",fontSize:10,marginTop:4}}>{d.note}</div>
+    <div style={{color:"#bbc",fontSize:10,marginTop:4}}>{d.note}</div>
     {d.proj&&<div style={{color:P.rose,fontSize:10,fontStyle:"italic",marginTop:2}}>▲ projected (HW roadmap)</div>}
   </div>);
 };
@@ -259,7 +263,7 @@ const Pill=({active,onClick,children,accent,style:sx})=>(
   <button onClick={onClick} style={{
     background:active?`${accent||P.cyan}18`:"transparent",
     border:`1px solid ${active?accent||P.cyan:"#222"}`,
-    borderRadius:20,color:active?accent||P.cyan:"#556",
+    borderRadius:20,color:active?accent||P.cyan:"#99a",
     fontFamily:font,fontSize:10.5,fontWeight:active?600:400,
     padding:"6px 16px",cursor:"pointer",transition:"all 0.2s",
     letterSpacing:0.3,whiteSpace:"nowrap",...(sx||{})
@@ -348,9 +352,9 @@ function App(){
                   <linearGradient id="infA" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={P.cyan} stopOpacity={0.12}/><stop offset="100%" stopColor={P.cyan} stopOpacity={0}/></linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke={P.grid}/>
-                <XAxis dataKey="label" tick={{fill:"#556",fontSize:9,fontFamily:font}} stroke="#222" angle={-35} textAnchor="end" height={60}/>
-                <YAxis domain={[-6,1]} ticks={infLogT} tickFormatter={infYFmt} tick={{fill:"#556",fontSize:9,fontFamily:font}} stroke="#222" width={90}
-                  label={{value:infYLabel,angle:-90,position:"insideLeft",offset:10,style:{fill:"#445",fontSize:10,fontFamily:font}}}/>
+                <XAxis dataKey="label" tick={{fill:"#99a",fontSize:9,fontFamily:font}} stroke="#222" angle={-35} textAnchor="end" height={60}/>
+                <YAxis domain={[-6,1]} ticks={infLogT} tickFormatter={infYFmt} tick={{fill:"#99a",fontSize:9,fontFamily:font}} stroke="#222" width={90}
+                  label={{value:infYLabel,angle:-90,position:"insideLeft",offset:10,style:{fill:"#889",fontSize:10,fontFamily:font}}}/>
                 <Tooltip content={<InfTT/>}/>
                 <Area dataKey={infYKey} stroke="none" fill="url(#infA)" connectNulls/>
                 <Line dataKey={infYKey} stroke={P.cyan} strokeWidth={2.5} dot={{r:4.5,fill:P.cyan,stroke:P.panel,strokeWidth:2}} connectNulls/>
@@ -370,13 +374,13 @@ function App(){
             <summary style={{cursor:"pointer",color:P.dim,fontSize:11,fontWeight:500,marginBottom:8}}>▸ Raw inference data</summary>
             <div style={{overflowX:"auto"}}>
               <table style={{width:"100%",borderCollapse:"collapse",fontSize:10.5,lineHeight:1.5}}>
-                <thead><tr style={{borderBottom:"1px solid #222"}}>{["Date","Model","$/query","Microwave equiv.",""].map((h,i)=>(<th key={i} style={{textAlign:"left",padding:"6px 10px",color:"#445",fontWeight:500}}>{h}</th>))}</tr></thead>
+                <thead><tr style={{borderBottom:"1px solid #222"}}>{["Date","Model","$/query","Microwave equiv.",""].map((h,i)=>(<th key={i} style={{textAlign:"left",padding:"6px 10px",color:"#ccd",fontWeight:500}}>{h}</th>))}</tr></thead>
                 <tbody>{infData.map((d,i)=>(<tr key={i} style={{borderBottom:`1px solid ${P.grid}`,opacity:d.proj?0.6:1}}>
-                  <td style={{padding:"5px 10px",color:"#889"}}>{d.label}</td>
+                  <td style={{padding:"5px 10px",color:"#ccd"}}>{d.label}</td>
                   <td style={{padding:"5px 10px",color:d.proj?P.rose:P.cyan,fontWeight:500}}>{d.model}{d.proj&&" ⌁"}</td>
                   <td style={{padding:"5px 10px",color:"#fff",fontWeight:500}}>{fCost(d.qc)}</td>
                   <td style={{padding:"5px 10px",color:P.amber}}>{fMW(d.mws)}</td>
-                  <td style={{padding:"5px 10px",color:"#334",fontSize:10}}>{d.note}</td>
+                  <td style={{padding:"5px 10px",color:"#99a",fontSize:10}}>{d.note}</td>
                 </tr>))}</tbody>
               </table>
             </div>
@@ -403,21 +407,26 @@ function App(){
           {trainTab==="frontier"&&(<div>
             <ChartWrap>
               <ResponsiveContainer width="100%" height={500}>
-                <ComposedChart data={frontier} margin={{top:10,right:20,left:25,bottom:30}}>
+                <ComposedChart data={frontier} margin={{top:10,right:80,left:25,bottom:30}}>
                   <defs><linearGradient id="fa" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={P.red} stopOpacity={0.1}/><stop offset="100%" stopColor={P.red} stopOpacity={0}/></linearGradient></defs>
                   <CartesianGrid strokeDasharray="3 3" stroke={P.grid}/>
-                  <XAxis dataKey="label" tick={{fill:"#556",fontSize:9,fontFamily:font}} stroke="#222" angle={-45} textAnchor="end" height={65}/>
-                  <YAxis yAxisId="c" domain={[2,10]} ticks={logT} tickFormatter={fLCT} tick={{fill:"#556",fontSize:9,fontFamily:font}} stroke="#222" width={65}
-                    label={{value:"Training Cost (USD)",angle:-90,position:"insideLeft",offset:5,style:{fill:"#445",fontSize:10,fontFamily:font}}}/>
+                  <XAxis dataKey="label" tick={{fill:"#99a",fontSize:9,fontFamily:font}} stroke="#222" angle={-45} textAnchor="end" height={65}/>
+                  <YAxis yAxisId="c" domain={[2,10]} ticks={logT} tickFormatter={fLCT} tick={{fill:"#99a",fontSize:9,fontFamily:font}} stroke="#222" width={65}
+                    label={{value:"Training Cost (USD)",angle:-90,position:"insideLeft",offset:5,style:{fill:"#889",fontSize:10,fontFamily:font}}}/>
+                  <YAxis yAxisId="e" orientation="right" domain={[-4,4]} ticks={eLogT} tickFormatter={fELT} tick={{fill:P.gold,fontSize:9,fontFamily:font}} stroke="#222" width={72}
+                    label={{value:"Training Energy",angle:90,position:"insideRight",offset:5,style:{fill:P.gold,fontSize:10,fontFamily:font}}}/>
                   <Tooltip content={<TrainTT/>}/>
                   <Area yAxisId="c" dataKey="actualLog" stroke="none" fill="url(#fa)" connectNulls/>
                   <Line yAxisId="c" dataKey="actualLog" stroke={P.red} strokeWidth={2.5} dot={props=>{const{cx,cy,payload}=props;if(cx==null||cy==null)return null;return(<circle key={payload.label} cx={cx} cy={cy} r={payload.tag==="eff"?6:5} fill={dCol(payload)} stroke={P.panel} strokeWidth={2}/>);}} connectNulls/>
                   <Line yAxisId="c" dataKey="projLog" stroke={P.red} strokeWidth={2} strokeDasharray="8 4" dot={{r:4,fill:P.red,stroke:P.panel,strokeWidth:2}} connectNulls/>
+                  <Line yAxisId="e" dataKey="actualGWh" stroke={P.gold} strokeWidth={2} dot={{r:3.5,fill:P.gold,stroke:P.panel,strokeWidth:2}} connectNulls/>
+                  <Line yAxisId="e" dataKey="projGWh" stroke={P.gold} strokeWidth={1.5} strokeDasharray="6 4" dot={{r:3,fill:P.gold,stroke:P.panel,strokeWidth:2}} connectNulls/>
                 </ComposedChart>
               </ResponsiveContainer>
             </ChartWrap>
             <Legend items={[
-              <span><span style={{color:P.red}}>━━</span> Frontier <span style={{color:P.red}}>╌╌</span> proj.</span>,
+              <span><span style={{color:P.red}}>━━</span> Cost <span style={{color:P.red}}>╌╌</span> proj.</span>,
+              <span><span style={{color:P.gold}}>━━</span> Energy (GWh) <span style={{color:P.gold}}>╌╌</span> proj.</span>,
               <span><span style={{color:P.green}}>●</span> Efficient (DS V3/R1, GPT-4o)</span>,
               <span><span style={{color:P.xai}}>●</span> xAI (Grok 3/4)</span>,
               <span><span style={{color:P.meta}}>●</span> Meta (Llama)</span>,
@@ -430,9 +439,9 @@ function App(){
               <ResponsiveContainer width="100%" height={480}>
                 <ComposedChart data={repData} margin={{top:10,right:20,left:25,bottom:25}}>
                   <CartesianGrid strokeDasharray="3 3" stroke={P.grid}/>
-                  <XAxis dataKey="label" tick={{fill:"#556",fontSize:10,fontFamily:font}} stroke="#222" angle={-35} textAnchor="end" height={60}/>
-                  <YAxis yAxisId="c" domain={[3,8]} ticks={[3,4,5,6,7,8]} tickFormatter={fLCT} tick={{fill:"#556",fontSize:9,fontFamily:font}} stroke="#222" width={65}
-                    label={{value:"Replication Cost (USD)",angle:-90,position:"insideLeft",offset:5,style:{fill:"#445",fontSize:10,fontFamily:font}}}/>
+                  <XAxis dataKey="label" tick={{fill:"#99a",fontSize:10,fontFamily:font}} stroke="#222" angle={-35} textAnchor="end" height={60}/>
+                  <YAxis yAxisId="c" domain={[3,8]} ticks={[3,4,5,6,7,8]} tickFormatter={fLCT} tick={{fill:"#99a",fontSize:9,fontFamily:font}} stroke="#222" width={65}
+                    label={{value:"Replication Cost (USD)",angle:-90,position:"insideLeft",offset:5,style:{fill:"#889",fontSize:10,fontFamily:font}}}/>
                   <Tooltip content={<TrainTT isRep/>}/>
                   <Line yAxisId="c" dataKey="aG3" stroke={P.cyan} strokeWidth={2.5} dot={{r:5,fill:P.cyan,stroke:P.panel,strokeWidth:2}} connectNulls/>
                   <Line yAxisId="c" dataKey="pG3" stroke={P.cyan} strokeWidth={2} strokeDasharray="8 4" dot={{r:4,fill:P.cyan,stroke:P.panel,strokeWidth:2}} connectNulls/>
@@ -460,15 +469,15 @@ function App(){
             <div style={{background:P.card,border:"1px solid #1a1a30",borderRadius:10,padding:"16px 18px",marginBottom:20}}>
               <div style={{fontSize:12,fontWeight:600,color:"#fff",marginBottom:10,fontFamily:hf}}>✈ Boeing 777-300ER Metal Breakdown</div>
               <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(120px, 1fr))",gap:10,fontSize:10.5}}>
-                {[{n:"Aluminum",k:"117,600",p:"70%",e:"1,764 MWh",cl:P.blue},{n:"Titanium",k:"11,760",p:"7%",e:"1,176 MWh",cl:"#ff6644"},{n:"Steel",k:"18,480",p:"11%",e:"148 MWh",cl:P.steel}].map(x=>(<div key={x.n} style={{padding:"6px 0"}}><div style={{color:x.cl,fontWeight:600,marginBottom:1}}>{x.n}</div><div style={{color:"#aab"}}>{x.k} kg ({x.p})</div><div style={{color:P.dim}}>{x.e}</div></div>))}
+                {[{n:"Aluminum",k:"117,600",p:"70%",e:"1,764 MWh",cl:P.blue},{n:"Titanium",k:"11,760",p:"7%",e:"1,176 MWh",cl:"#ff6644"},{n:"Steel",k:"18,480",p:"11%",e:"148 MWh",cl:P.steel}].map(x=>(<div key={x.n} style={{padding:"6px 0"}}><div style={{color:x.cl,fontWeight:600,marginBottom:1}}>{x.n}</div><div style={{color:"#ccd"}}>{x.k} kg ({x.p})</div><div style={{color:P.dim}}>{x.e}</div></div>))}
                 <div style={{padding:"6px 0",borderLeft:`2px solid ${P.gold}`,paddingLeft:12}}><div style={{color:P.gold,fontWeight:700}}>TOTAL</div><div style={{color:"#fff",fontWeight:600}}>148,680 kg</div><div style={{color:P.gold,fontWeight:600}}>3,100 MWh → $465K</div></div>
               </div>
             </div>
             <div style={{overflowX:"auto"}}>
               <table style={{width:"100%",borderCollapse:"collapse",fontSize:10.5,lineHeight:1.5}}>
-                <thead><tr style={{borderBottom:"1px solid #222"}}>{["Date","Model","Cost","Energy","✈ 777s","Context"].map((h,i)=>(<th key={i} style={{textAlign:"left",padding:"6px 10px",color:"#445",fontWeight:500}}>{h}</th>))}</tr></thead>
+                <thead><tr style={{borderBottom:"1px solid #222"}}>{["Date","Model","Cost","Energy","✈ 777s","Context"].map((h,i)=>(<th key={i} style={{textAlign:"left",padding:"6px 10px",color:"#ccd",fontWeight:500}}>{h}</th>))}</tr></thead>
                 <tbody>{FR.map((d,i)=>{const n=to7g(d.gwh);let ctx="";if(n<0.01)ctx="A few wing ribs";else if(n<0.1)ctx="Partial fuselage";else if(n<1)ctx="One airframe's metal";else if(n<5)ctx="Small fleet";else if(n<25)ctx="Regional airline fleet";else if(n<100)ctx="Major airline fleet";else if(n<300)ctx="Substantial fraction of global 777 fleet";else ctx="~28% of all 777s ever delivered (~1,700)";return(<tr key={i} style={{borderBottom:`1px solid ${P.grid}`,opacity:d.p?0.6:1}}>
-                  <td style={{padding:"4px 10px",color:"#889",fontSize:10}}>{d.l}</td>
+                  <td style={{padding:"4px 10px",color:"#ccd",fontSize:10}}>{d.l}</td>
                   <td style={{padding:"4px 10px",color:dCol(d),fontWeight:500}}>{d.m}{d.p&&" ⌁"}</td>
                   <td style={{padding:"4px 10px",color:"#fff",fontWeight:500}}>{fC(d.c)}</td>
                   <td style={{padding:"4px 10px",color:P.gold}}>{fGWh(d.gwh)}</td>
@@ -505,9 +514,9 @@ function App(){
                     <linearGradient id="ftAG" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={P.purple} stopOpacity={0.1}/><stop offset="100%" stopColor={P.purple} stopOpacity={0}/></linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke={P.grid}/>
-                  <XAxis dataKey="label" tick={{fill:"#556",fontSize:9,fontFamily:font}} stroke="#222" angle={-35} textAnchor="end" height={60}/>
-                  <YAxis domain={[-2,2]} ticks={ftLogTicks} tickFormatter={fFTCost} tick={{fill:"#556",fontSize:9,fontFamily:font}} stroke="#222" width={60}
-                    label={{value:"Fine-Tuning Cost (USD)",angle:-90,position:"insideLeft",offset:10,style:{fill:"#445",fontSize:10,fontFamily:font}}}/>
+                  <XAxis dataKey="label" tick={{fill:"#99a",fontSize:9,fontFamily:font}} stroke="#222" angle={-35} textAnchor="end" height={60}/>
+                  <YAxis domain={[-2,2]} ticks={ftLogTicks} tickFormatter={fFTCost} tick={{fill:"#99a",fontSize:9,fontFamily:font}} stroke="#222" width={60}
+                    label={{value:"Fine-Tuning Cost (USD)",angle:-90,position:"insideLeft",offset:10,style:{fill:"#889",fontSize:10,fontFamily:font}}}/>
                   <Tooltip content={<FtTT/>}/>
                   <ReferenceLine y={0} stroke={P.gold+"66"} strokeDasharray="4 4"
                     label={{value:"\u2248 less than a coffee",position:"right",fill:P.gold,fontSize:9,fontFamily:font}}/>
@@ -531,28 +540,28 @@ function App(){
             <div style={{fontSize:12,fontWeight:600,color:P.purple,fontFamily:hf,marginBottom:10}}>Series A {"\u2014"} API / Hosted Fine-Tuning</div>
             <div style={{overflowX:"auto",marginBottom:20}}>
               <table style={{width:"100%",borderCollapse:"collapse",fontSize:10.5,lineHeight:1.5}}>
-                <thead><tr style={{borderBottom:"1px solid #222"}}>{["Date","Model","$/1M tokens","Cost (3M tok)","Notes"].map(function(h,i){return(<th key={i} style={{textAlign:"left",padding:"6px 10px",color:"#445",fontWeight:500}}>{h}</th>);})}</tr></thead>
+                <thead><tr style={{borderBottom:"1px solid #222"}}>{["Date","Model","$/1M tokens","Cost (3M tok)","Notes"].map(function(h,i){return(<th key={i} style={{textAlign:"left",padding:"6px 10px",color:"#ccd",fontWeight:500}}>{h}</th>);})}</tr></thead>
                 <tbody>{ftApiData.map(function(d,i){return(<tr key={i} style={{borderBottom:"1px solid "+P.grid,opacity:d.proj?0.6:1}}>
-                  <td style={{padding:"5px 10px",color:"#889"}}>{d.label}</td>
+                  <td style={{padding:"5px 10px",color:"#ccd"}}>{d.label}</td>
                   <td style={{padding:"5px 10px",color:d.proj?P.rose:P.purple,fontWeight:500}}>{d.model}{d.proj&&" \u2301"}</td>
                   <td style={{padding:"5px 10px",color:"#fff",fontWeight:500}}>{"$"+d.ppm.toFixed(2)}</td>
                   <td style={{padding:"5px 10px",color:P.purple,fontWeight:600}}>{"$"+d.cost.toFixed(2)}</td>
-                  <td style={{padding:"5px 10px",color:"#334",fontSize:10}}>{d.note}</td>
+                  <td style={{padding:"5px 10px",color:"#99a",fontSize:10}}>{d.note}</td>
                 </tr>);})}</tbody>
               </table>
             </div>
             <div style={{fontSize:12,fontWeight:600,color:P.green,fontFamily:hf,marginBottom:10}}>Series B {"\u2014"} Self-Hosted LoRA (7B{"\u2013"}13B open-weight)</div>
             <div style={{overflowX:"auto"}}>
               <table style={{width:"100%",borderCollapse:"collapse",fontSize:10.5,lineHeight:1.5}}>
-                <thead><tr style={{borderBottom:"1px solid #222"}}>{["Date","Model","GPU","$/hr","Hours","Total Cost","Notes"].map(function(h,i){return(<th key={i} style={{textAlign:"left",padding:"6px 10px",color:"#445",fontWeight:500}}>{h}</th>);})}</tr></thead>
+                <thead><tr style={{borderBottom:"1px solid #222"}}>{["Date","Model","GPU","$/hr","Hours","Total Cost","Notes"].map(function(h,i){return(<th key={i} style={{textAlign:"left",padding:"6px 10px",color:"#ccd",fontWeight:500}}>{h}</th>);})}</tr></thead>
                 <tbody>{ftLoraData.map(function(d,i){return(<tr key={i} style={{borderBottom:"1px solid "+P.grid,opacity:d.proj?0.6:1}}>
-                  <td style={{padding:"5px 10px",color:"#889"}}>{d.label}</td>
+                  <td style={{padding:"5px 10px",color:"#ccd"}}>{d.label}</td>
                   <td style={{padding:"5px 10px",color:d.proj?P.rose:P.green,fontWeight:500}}>{d.model}{d.proj&&" \u2301"}</td>
                   <td style={{padding:"5px 10px",color:P.steel}}>{d.gpu}</td>
                   <td style={{padding:"5px 10px",color:"#fff"}}>{"$"+d.gph.toFixed(2)}</td>
-                  <td style={{padding:"5px 10px",color:"#aab"}}>{d.hrs+"h"}</td>
+                  <td style={{padding:"5px 10px",color:"#ccd"}}>{d.hrs+"h"}</td>
                   <td style={{padding:"5px 10px",color:P.green,fontWeight:600}}>{"$"+d.cost.toFixed(2)}</td>
-                  <td style={{padding:"5px 10px",color:"#334",fontSize:10}}>{d.note}</td>
+                  <td style={{padding:"5px 10px",color:"#99a",fontSize:10}}>{d.note}</td>
                 </tr>);})}</tbody>
               </table>
             </div>
@@ -564,7 +573,7 @@ function App(){
               <div style={{background:P.card,border:"1px solid "+P.purple+"22",borderRadius:12,padding:"20px"}}>
                 <div style={{fontSize:9,letterSpacing:2,color:P.dim,textTransform:"uppercase",marginBottom:8}}>API Fine-Tuning</div>
                 <div style={{display:"flex",alignItems:"baseline",gap:8}}>
-                  <span style={{fontSize:12,color:"#889"}}>Mar 2023</span>
+                  <span style={{fontSize:12,color:"#ccd"}}>Mar 2023</span>
                   <span style={{fontSize:20,fontWeight:700,color:P.purple,fontFamily:hf}}>$24</span>
                 </div>
                 <div style={{display:"flex",alignItems:"center",gap:6,margin:"6px 0"}}>
@@ -573,14 +582,14 @@ function App(){
                   <div style={{flex:1,height:1,background:"linear-gradient(to right, "+P.green+", "+P.purple+")"}}/>
                 </div>
                 <div style={{display:"flex",alignItems:"baseline",gap:8}}>
-                  <span style={{fontSize:12,color:"#889"}}>Oct 2025</span>
+                  <span style={{fontSize:12,color:"#ccd"}}>Oct 2025</span>
                   <span style={{fontSize:20,fontWeight:700,color:P.green,fontFamily:hf}}>$0.30</span>
                 </div>
               </div>
               <div style={{background:P.card,border:"1px solid "+P.green+"22",borderRadius:12,padding:"20px"}}>
                 <div style={{fontSize:9,letterSpacing:2,color:P.dim,textTransform:"uppercase",marginBottom:8}}>Self-Hosted LoRA</div>
                 <div style={{display:"flex",alignItems:"baseline",gap:8}}>
-                  <span style={{fontSize:12,color:"#889"}}>Jun 2023</span>
+                  <span style={{fontSize:12,color:"#ccd"}}>Jun 2023</span>
                   <span style={{fontSize:20,fontWeight:700,color:P.green,fontFamily:hf}}>$7.00</span>
                 </div>
                 <div style={{display:"flex",alignItems:"center",gap:6,margin:"6px 0"}}>
@@ -589,14 +598,14 @@ function App(){
                   <div style={{flex:1,height:1,background:"linear-gradient(to right, "+P.cyan+", "+P.green+")"}}/>
                 </div>
                 <div style={{display:"flex",alignItems:"baseline",gap:8}}>
-                  <span style={{fontSize:12,color:"#889"}}>2027 (est.)</span>
+                  <span style={{fontSize:12,color:"#ccd"}}>2027 (est.)</span>
                   <span style={{fontSize:20,fontWeight:700,color:P.cyan,fontFamily:hf}}>$0.01</span>
                 </div>
               </div>
             </div>
             <div style={{background:"linear-gradient(135deg, "+P.card+" 0%, #161630 100%)",border:"1px solid #1a1a40",borderRadius:12,padding:"24px 28px"}}>
               <div style={{fontSize:14,fontWeight:600,color:P.bright,fontFamily:hf,marginBottom:10}}>The Convergence</div>
-              <div style={{fontSize:11.5,color:"#99a",lineHeight:1.8}}>
+              <div style={{fontSize:11.5,color:"#bbc",lineHeight:1.8}}>
                 {"API fine-tuning and self-hosted LoRA costs are converging toward near-zero. In 2023, fine-tuning a model via API cost $24 \u2014 today the same capability costs $0.30 with open-weight LoRA on rented GPU."}
                 <br/><br/>
                 {"Fine-tuning a model now costs less than a single frontier inference query did in 2022 ($0.06). This means "}
@@ -624,7 +633,7 @@ function App(){
             <div style={{background:P.card,border:`1px solid ${P.cyan}22`,borderRadius:12,padding:"20px"}}>
               <div style={{fontSize:9,letterSpacing:2,color:P.dim,textTransform:"uppercase",marginBottom:8}}>Inference Cost / Query</div>
               <div style={{display:"flex",alignItems:"baseline",gap:8}}>
-                <span style={{fontSize:12,color:"#889"}}>Nov 2022</span>
+                <span style={{fontSize:12,color:"#ccd"}}>Nov 2022</span>
                 <span style={{fontSize:20,fontWeight:700,color:P.cyan,fontFamily:hf}}>$0.060</span>
               </div>
               <div style={{display:"flex",alignItems:"center",gap:6,margin:"6px 0"}}>
@@ -633,7 +642,7 @@ function App(){
                 <div style={{flex:1,height:1,background:`linear-gradient(to right, ${P.green}, ${P.cyan})`}}/>
               </div>
               <div style={{display:"flex",alignItems:"baseline",gap:8}}>
-                <span style={{fontSize:12,color:"#889"}}>Dec 2025</span>
+                <span style={{fontSize:12,color:"#ccd"}}>Dec 2025</span>
                 <span style={{fontSize:20,fontWeight:700,color:P.green,fontFamily:hf}}>$0.000015</span>
               </div>
               <div style={{fontSize:10,color:P.dim,marginTop:10,lineHeight:1.6}}>
@@ -645,7 +654,7 @@ function App(){
             <div style={{background:P.card,border:`1px solid ${P.red}22`,borderRadius:12,padding:"20px"}}>
               <div style={{fontSize:9,letterSpacing:2,color:P.dim,textTransform:"uppercase",marginBottom:8}}>Frontier Training Cost</div>
               <div style={{display:"flex",alignItems:"baseline",gap:8}}>
-                <span style={{fontSize:12,color:"#889"}}>2020</span>
+                <span style={{fontSize:12,color:"#ccd"}}>2020</span>
                 <span style={{fontSize:20,fontWeight:700,color:P.red,fontFamily:hf}}>$4.6M</span>
               </div>
               <div style={{display:"flex",alignItems:"center",gap:6,margin:"6px 0"}}>
@@ -654,7 +663,7 @@ function App(){
                 <div style={{flex:1,height:1,background:`linear-gradient(to right, ${P.xai}, ${P.red})`}}/>
               </div>
               <div style={{display:"flex",alignItems:"baseline",gap:8}}>
-                <span style={{fontSize:12,color:"#889"}}>2025</span>
+                <span style={{fontSize:12,color:"#ccd"}}>2025</span>
                 <span style={{fontSize:20,fontWeight:700,color:P.xai,fontFamily:hf}}>$500M</span>
               </div>
               <div style={{fontSize:10,color:P.dim,marginTop:10,lineHeight:1.6}}>
@@ -665,7 +674,7 @@ function App(){
 
             <div style={{background:P.card,border:`1px solid ${P.gold}22`,borderRadius:12,padding:"20px"}}>
               <div style={{fontSize:9,letterSpacing:2,color:P.dim,textTransform:"uppercase",marginBottom:8}}>The Ratio</div>
-              <div style={{fontSize:10,color:"#889",lineHeight:1.7,marginBottom:8}}>
+              <div style={{fontSize:10,color:"#ccd",lineHeight:1.7,marginBottom:8}}>
                 How many inference queries could you buy for the cost of one frontier training run?
               </div>
               <div style={{display:"grid",gap:6}}>
@@ -674,7 +683,7 @@ function App(){
                   {y:"2025",train:"GPT-5 ($500M)",q:500e6/0.000015,qf:"33T"},
                   {y:"2027",train:"Frontier ($2B)",q:2e9/0.000001,qf:"2,000T"},
                 ].map(r=>(<div key={r.y} style={{display:"flex",justifyContent:"space-between",padding:"4px 0",borderBottom:`1px solid ${P.grid}`}}>
-                  <span style={{color:"#889",fontSize:11}}>{r.y} — {r.train}</span>
+                  <span style={{color:"#ccd",fontSize:11}}>{r.y} — {r.train}</span>
                   <span style={{color:P.gold,fontWeight:600,fontSize:12}}>{r.qf} queries</span>
                 </div>))}
               </div>
@@ -686,7 +695,7 @@ function App(){
             <div style={{background:P.card,border:`1px solid ${P.purple}22`,borderRadius:12,padding:"20px"}}>
               <div style={{fontSize:9,letterSpacing:2,color:P.dim,textTransform:"uppercase",marginBottom:8}}>Fine-Tuning Cost</div>
               <div style={{display:"flex",alignItems:"baseline",gap:8}}>
-                <span style={{fontSize:12,color:"#889"}}>Mar 2023</span>
+                <span style={{fontSize:12,color:"#ccd"}}>Mar 2023</span>
                 <span style={{fontSize:20,fontWeight:700,color:P.purple,fontFamily:hf}}>$24</span>
               </div>
               <div style={{display:"flex",alignItems:"center",gap:6,margin:"6px 0"}}>
@@ -695,7 +704,7 @@ function App(){
                 <div style={{flex:1,height:1,background:`linear-gradient(to right, ${P.green}, ${P.purple})`}}/>
               </div>
               <div style={{display:"flex",alignItems:"baseline",gap:8}}>
-                <span style={{fontSize:12,color:"#889"}}>Oct 2025</span>
+                <span style={{fontSize:12,color:"#ccd"}}>Oct 2025</span>
                 <span style={{fontSize:20,fontWeight:700,color:P.green,fontFamily:hf}}>$0.30</span>
               </div>
               <div style={{fontSize:10,color:P.dim,marginTop:10,lineHeight:1.6}}>
@@ -708,7 +717,7 @@ function App(){
           {/* Key insight */}
           <div style={{background:`linear-gradient(135deg, ${P.card} 0%, #161630 100%)`,border:"1px solid #1a1a40",borderRadius:12,padding:"24px 28px",marginBottom:20}}>
             <div style={{fontSize:14,fontWeight:600,color:P.bright,fontFamily:hf,marginBottom:10}}>Why it matters</div>
-            <div style={{fontSize:11.5,color:"#99a",lineHeight:1.8}}>
+            <div style={{fontSize:11.5,color:"#bbc",lineHeight:1.8}}>
               The economics of AI are splitting into two distinct regimes. <span style={{color:P.cyan}}>Using</span> frontier intelligence is approaching near-zero marginal cost — a single query that once cost more than heating a bowl of soup now costs less than firing a single neuron. Meanwhile, <span style={{color:P.red}}>creating</span> that intelligence demands industrial-scale energy commitments that rival smelting the metal for entire airline fleets.
               <br/><br/>
               This divergence has structural implications: inference commoditizes rapidly (enabling ubiquitous deployment), while training concentrates into fewer organizations that can marshal the capital. The <span style={{color:P.green}}>efficient outliers</span> like DeepSeek demonstrate that algorithmic innovation can partially counteract this concentration — training a GPT-4-class model for $5.6M (1.2 Boeing 777s of energy) vs. $78M (16 Boeing 777s) — but the frontier itself keeps moving upward.
@@ -719,17 +728,17 @@ function App(){
         {/* ═══════════════════════════════════════════ */}
         {/* FOOTER ASSUMPTIONS                         */}
         {/* ═══════════════════════════════════════════ */}
-        <div style={{marginTop:32,padding:"16px 20px",background:P.card,borderRadius:8,border:"1px solid #1a1a30",fontSize:9.5,color:"#445",lineHeight:1.8}}>
-          <strong style={{color:"#667"}}>Assumptions & sources (updated Feb 2026)</strong><br/>
-          <strong style={{color:"#556"}}>Inference:</strong> Query = {QI} input + {QO} output tokens. Microwave = {MW_WATTS}W. Electricity = ${ELEC_R}/kWh US avg.
+        <div style={{marginTop:32,padding:"16px 20px",background:P.card,borderRadius:8,border:"1px solid #1a1a30",fontSize:9.5,color:"#ccd",lineHeight:1.8}}>
+          <strong style={{color:"#bbc"}}>Assumptions & sources (updated Feb 2026)</strong><br/>
+          <strong style={{color:"#bbc"}}>Inference:</strong> Query = {QI} input + {QO} output tokens. Microwave = {MW_WATTS}W. Electricity = ${ELEC_R}/kWh US avg.
           Frontier model = cheapest achieving GPT-4-class benchmarks at each date. Projections: NVIDIA Blackwell→Vera Rubin→Rubin Ultra HW roadmap.
           Sources: OpenAI pricing, Epoch AI, a16z LLMflation, DeepSeek announcements, NVIDIA roadmaps.<br/>
-          <strong style={{color:"#556"}}>Training:</strong> 777-300ER: OEW ~168t → 70% Al, 7% Ti, 11% steel = 148.7t metal. Smelting: Al=15, Ti=100, Steel=8 kWh/kg → 3,100 MWh = $465K @ $0.15/kWh.
+          <strong style={{color:"#bbc"}}>Training:</strong> 777-300ER: OEW ~168t → 70% Al, 7% Ti, 11% steel = 148.7t metal. Smelting: Al=15, Ti=100, Steel=8 kWh/kg → 3,100 MWh = $465K @ $0.15/kWh.
           Boeing 777 equivalents use actual training energy (GWh), not cost÷electricity rate. Electricity is only ~10-15% of total training cost (rest: GPU amortization, overhead, cloud margin).
           Energy sources: Grok 4 = 310 GWh (Epoch AI, 246M H100-hours, Sep 2025). GPT-4 ≈ 50 GWh (25K A100 × 100d, widely cited). DeepSeek V3 ≈ 3.6 GWh (2.8M H800-hrs).
           Others estimated from GPU-hours × TDP × 0.75 utilization × 2.03 non-GPU overhead × 1.2 PUE. HW FLOP/watt improves ~1.28×/yr (Epoch AI).
           Projections: ~2.5×/yr net energy growth (4.4× compute growth offset by HW + algorithmic efficiency gains).<br/>
-          <strong style={{color:"#556"}}>Fine-tuning:</strong> API costs from OpenAI/Mistral published pricing. Self-hosted estimates assume 1M training tokens × 3 epochs on LoRA/QLoRA with Unsloth on rented cloud GPU.
+          <strong style={{color:"#bbc"}}>Fine-tuning:</strong> API costs from OpenAI/Mistral published pricing. Self-hosted estimates assume 1M training tokens × 3 epochs on LoRA/QLoRA with Unsloth on rented cloud GPU.
           GPU rates: Lambda Labs / RunPod spot pricing. Open-weight models: Llama 2/3/4, Mistral 7B.
         </div>
       </div>
